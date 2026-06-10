@@ -87,3 +87,40 @@ test('returns 401 when account is locked', async () => {
   expect(res.status).toHaveBeenCalledWith(401);
   expect(next).not.toHaveBeenCalled();
 });
+
+const requireRole = require('../src/middleware/requireRole');
+
+describe('requireRole', () => {
+  test('calls next() when user has the required role (string)', () => {
+    const req = { user: { role: 'admin' } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    requireRole('admin')(req, res, next);
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  test('calls next() when user role is in the allowed array', () => {
+    const req = { user: { role: 'registered' } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    requireRole(['admin', 'registered'])(req, res, next);
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  test('returns 403 when role does not match', () => {
+    const req = { user: { role: 'registered' } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    requireRole('admin')(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('returns 401 when req.user is not set (authenticate not called first)', () => {
+    const req = {};
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    requireRole('admin')(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+});
