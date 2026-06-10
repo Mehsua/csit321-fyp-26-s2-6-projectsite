@@ -14,7 +14,9 @@ class AuthService {
 
     if (authError) {
       const msg = authError.message || '';
-      if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already exists')) {
+      const code = authError.code || '';
+      if (code === 'user_already_exists' || code === 'email_address_not_authorized' ||
+          msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already exists')) {
         throw Object.assign(new Error('Account already exists'), { status: 409 });
       }
       throw Object.assign(new Error('Registration failed: ' + msg), { status: 500 });
@@ -37,6 +39,7 @@ class AuthService {
       .single();
 
     if (dbError) {
+      await supabaseAdmin.auth.admin.deleteUser(authUserId).catch(() => {});
       throw Object.assign(new Error('Failed to create user profile: ' + dbError.message), { status: 500 });
     }
 
@@ -51,16 +54,16 @@ class AuthService {
       .single();
 
     if (lookupError || !userRow) {
-      throw { status: 401, message: 'Incorrect email or password' };
+      throw Object.assign(new Error('Incorrect email or password'), { status: 401 });
     }
 
     if (!userRow.is_active) {
-      throw { status: 401, message: 'Account has been deactivated' };
+      throw Object.assign(new Error('Account has been deactivated'), { status: 401 });
     }
 
     if (userRow.is_locked) {
       if (userRow.lock_until && new Date(userRow.lock_until) > new Date()) {
-        throw { status: 423, message: 'Account locked', lock_until: userRow.lock_until };
+        throw Object.assign(new Error('Account locked'), { status: 423, lock_until: userRow.lock_until });
       }
       await supabaseAdmin
         .from('users')
@@ -89,7 +92,7 @@ class AuthService {
         update.lock_until = new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000).toISOString();
       }
       await supabaseAdmin.from('users').update(update).eq('user_id', userRow.user_id);
-      throw { status: 401, message: 'Incorrect email or password' };
+      throw Object.assign(new Error('Incorrect email or password'), { status: 401 });
     }
 
     await supabaseAdmin
