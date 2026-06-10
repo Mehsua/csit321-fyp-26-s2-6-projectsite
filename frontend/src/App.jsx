@@ -64,7 +64,6 @@ const RECIPES = [
   }
 ];
 
-const ADMIN_CREDENTIALS = { email: "admin@recipebot.com", password: "admin123" };
 
 // ─── Recipe Matching ──────────────────────────────────────────────────────────
 function matchRecipes(inputText, userPrefs = {}) {
@@ -603,12 +602,14 @@ Guidelines:
               <tr>{["Name", "Email", "Role", "Sessions"].map(h => <th key={h} style={S.th}>{h}</th>)}</tr>
             </thead>
             <tbody>
-              <tr>
-                <td style={S.td}>Admin</td>
-                <td style={S.td}>admin@recipebot.com</td>
-                <td style={S.td}><span style={S.badge("info")}>admin</span></td>
-                <td style={S.td}>—</td>
-              </tr>
+              {user?.isAdmin && (
+                <tr>
+                  <td style={S.td}>{user.name}</td>
+                  <td style={S.td}>{user.email}</td>
+                  <td style={S.td}><span style={S.badge("info")}>admin</span></td>
+                  <td style={S.td}>—</td>
+                </tr>
+              )}
               {user && !user.isAdmin && (
                 <tr>
                   <td style={S.td}>{user.name}</td>
@@ -649,7 +650,6 @@ Guidelines:
               <label style={S.label}>Password</label>
               <input style={S.input} type="password" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
             </div>
-            {isLogin && <div style={{ fontSize: 12, color: "#999", marginBottom: 12 }}>Admin: admin@recipebot.com / admin123</div>}
             <button type="submit" style={S.formBtn}>{isLogin ? "Sign in" : "Create account"}</button>
           </form>
           <div style={S.formLink} onClick={() => { setPage(isLogin ? "register" : "login"); setAuthError(""); }}>
