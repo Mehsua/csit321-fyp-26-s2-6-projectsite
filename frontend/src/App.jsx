@@ -281,6 +281,35 @@ export default function App() {
   const currentSession = sessions.find(s => s.id === activeSession);
   const messages = currentSession?.messages || [];
 
+  // JWT restore + guest session on mount
+  useEffect(() => {
+    async function initApp() {
+      const storedToken = getToken();
+      if (storedToken) {
+        try {
+          const { user: profile } = await api.get("/api/auth/me");
+          setUser({
+            name: profile.name,
+            email: profile.email,
+            role: profile.role,
+            isAdmin: profile.role === "admin",
+          });
+          const session = await api.post("/api/sessions");
+          setSessionId(session.session_id);
+        } catch (_) {
+          setToken(null);
+          setUser(null);
+          const session = await api.post("/api/sessions").catch(() => null);
+          if (session) setSessionId(session.session_id);
+        }
+      } else {
+        const session = await api.post("/api/sessions").catch(() => null);
+        if (session) setSessionId(session.session_id);
+      }
+    }
+    initApp();
+  }, []);
+
   // Check Ollama on mount
   useEffect(() => {
     fetch("http://localhost:11434/api/tags").then(() => setOllamaOnline(true)).catch(() => setOllamaOnline(false));
