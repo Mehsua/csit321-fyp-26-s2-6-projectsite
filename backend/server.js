@@ -6,6 +6,7 @@ const morgan = require('morgan');
 
 const healthRouter = require('./src/routes/health');
 const authRouter = require('./src/routes/auth');
+const sessionsRouter = require('./src/routes/sessions');
 const errorHandler = require('./src/middleware/errorHandler');
 
 const app = express();
@@ -28,6 +29,7 @@ app.use(express.json());
 
 app.use('/api', healthRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/sessions', sessionsRouter);
 
 app.use(errorHandler);
 
