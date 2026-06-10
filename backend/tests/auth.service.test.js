@@ -1,12 +1,4 @@
 jest.mock('../src/db/supabase', () => {
-  const makeChain = (result) => ({
-    insert: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    single: jest.fn().mockResolvedValue(result),
-    eq: jest.fn().mockReturnThis(),
-  });
-
   return {
     supabase: {},
     supabaseAdmin: {
@@ -21,7 +13,12 @@ jest.mock('../src/db/supabase', () => {
   };
 });
 
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn(),
+}));
+
 const { supabaseAdmin } = require('../src/db/supabase');
+const { createClient } = require('@supabase/supabase-js');
 const AuthService = require('../src/services/AuthService');
 
 beforeEach(() => jest.clearAllMocks());
@@ -93,11 +90,7 @@ describe('AuthService.login', () => {
   test('returns access_token and user on valid credentials', async () => {
     mockUserLookup(mockUserRow);
 
-    // Mock signInWithPassword via a new createClient call inside AuthService
-    // AuthService uses require('@supabase/supabase-js').createClient internally for sign-in
-    // We test the outcome: supabaseAdmin.from called for fail_count reset
-    const signInModule = require('@supabase/supabase-js');
-    const mockSignIn = {
+    const mockSignInClient = {
       auth: {
         signInWithPassword: jest.fn().mockResolvedValue({
           data: {
@@ -108,38 +101,24 @@ describe('AuthService.login', () => {
         }),
       },
     };
-    jest.spyOn(signInModule, 'createClient').mockReturnValue(mockSignIn);
+    createClient.mockReturnValue(mockSignInClient);
 
-    // Re-require AuthService so it picks up the mock
-    jest.resetModules();
-    // Re-apply the supabaseAdmin mock
-    jest.mock('../src/db/supabase', () => ({
-      supabase: {},
-      supabaseAdmin: {
-        auth: { admin: { createUser: jest.fn() }, getUser: jest.fn() },
-        from: jest.fn(),
-      },
-    }));
-    const { supabaseAdmin: admin2 } = require('../src/db/supabase');
-    admin2.from.mockReturnValue({
+    // After success, AuthService resets fail_count — mock the update call
+    supabaseAdmin.from.mockReturnValue({
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       single: jest.fn().mockResolvedValue({ data: mockUserRow, error: null }),
       update: jest.fn().mockReturnThis(),
     });
-    const AS2 = require('../src/services/AuthService');
 
-    const result = await AS2.login({ email: 'user@test.com', password: 'correctpass' });
+    const result = await AuthService.login({ email: 'user@test.com', password: 'correctpass' });
     expect(result.access_token).toBe('jwt-abc');
     expect(result.user.role).toBe('registered');
-
-    jest.resetModules();
   });
 
   test('increments fail_count on wrong password', async () => {
     const updateMock = jest.fn().mockReturnThis();
     const eqMock = jest.fn().mockReturnThis();
-    let callCount = 0;
     supabaseAdmin.from.mockImplementation(() => ({
       select: jest.fn().mockReturnThis(),
       eq: eqMock,
@@ -147,9 +126,7 @@ describe('AuthService.login', () => {
       update: updateMock,
     }));
 
-    // Mock signInWithPassword to fail
-    const signInModule = require('@supabase/supabase-js');
-    jest.spyOn(signInModule, 'createClient').mockReturnValue({
+    createClient.mockReturnValue({
       auth: {
         signInWithPassword: jest.fn().mockResolvedValue({
           data: { session: null },
@@ -174,8 +151,7 @@ describe('AuthService.login', () => {
       update: updateMock,
     }));
 
-    const signInModule = require('@supabase/supabase-js');
-    jest.spyOn(signInModule, 'createClient').mockReturnValue({
+    createClient.mockReturnValue({
       auth: {
         signInWithPassword: jest.fn().mockResolvedValue({
           data: { session: null },
