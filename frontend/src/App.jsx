@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { api, setToken, getToken } from "./lib/api";
 
 // ─── Seed Data ────────────────────────────────────────────────────────────────
 const RECIPES = [
@@ -269,6 +270,7 @@ export default function App() {
   const [ollamaOnline, setOllamaOnline] = useState(null);
   const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
   const [authError, setAuthError] = useState("");
+  const [sessionId, setSessionId] = useState(null);
   const [prefs, setPrefs] = useState({ halal: false, vegetarian: false, vegan: false, glutenFree: false, allergens: [] });
   const [adminRecipes, setAdminRecipes] = useState(RECIPES);
   const [editRecipe, setEditRecipe] = useState(null);
@@ -379,29 +381,71 @@ Guidelines:
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
-  function handleLogin(e) {
+  async function handleLogin(e) {
     e.preventDefault();
-    if (authForm.email === ADMIN_CREDENTIALS.email && authForm.password === ADMIN_CREDENTIALS.password) {
-      setUser({ name: "Admin", email: authForm.email, isAdmin: true });
-      setPage("chat");
-    } else if (authForm.email && authForm.password.length >= 6) {
-      setUser({ name: authForm.name || authForm.email.split("@")[0], email: authForm.email, isAdmin: false });
+    setAuthError("");
+    if (!authForm.email || !authForm.password) {
+      setAuthError("Email and password are required.");
+      return;
+    }
+    try {
+      const result = await api.post("/api/auth/login", {
+        email: authForm.email,
+        password: authForm.password,
+      });
+      setToken(result.access_token);
+      setUser({
+        name: result.user.name,
+        email: result.user.email,
+        role: result.user.role,
+        isAdmin: result.user.role === "admin",
+      });
       setPage("chat");
       setAuthError("");
-    } else {
-      setAuthError("Invalid credentials. Password must be at least 6 characters.");
+      const session = await api.post("/api/sessions");
+      setSessionId(session.session_id);
+    } catch (err) {
+      if (err.status === 423) {
+        const lockUntil = err.data?.lock_until
+          ? new Date(err.data.lock_until).toLocaleTimeString()
+          : "15 minutes";
+        setAuthError(`Account locked. Try again after ${lockUntil}.`);
+      } else {
+        setAuthError(err.message || "Login failed. Please try again.");
+      }
     }
   }
 
-  function handleRegister(e) {
+  async function handleRegister(e) {
     e.preventDefault();
-    if (!authForm.name || !authForm.email || authForm.password.length < 6) {
-      setAuthError("Please fill in all fields. Password must be at least 6 characters.");
+    setAuthError("");
+    if (!authForm.name || !authForm.email || authForm.password.length < 8) {
+      setAuthError("Please fill all fields. Password must be at least 8 characters.");
       return;
     }
-    setUser({ name: authForm.name, email: authForm.email, isAdmin: false });
+    try {
+      await api.post("/api/auth/register", {
+        email: authForm.email,
+        password: authForm.password,
+        name: authForm.name,
+      });
+      setPage("login");
+      setAuthError("");
+    } catch (err) {
+      setAuthError(err.message || "Registration failed. Please try again.");
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await api.post("/api/auth/logout");
+    } catch (_) {
+      // Ignore logout API errors — clear local state regardless
+    }
+    setToken(null);
+    setUser(null);
     setPage("chat");
-    setAuthError("");
+    setSessionId(null);
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -675,7 +719,7 @@ Guidelines:
               {user.isAdmin && <button style={{ ...S.btn, color: page === "admin" ? "#16a34a" : "#555" }} onClick={() => setPage("admin")}>Admin</button>}
               <button style={{ ...S.btn, color: page === "profile" ? "#16a34a" : "#555" }} onClick={() => setPage("profile")}>Profile</button>
               <div style={{ ...S.avatar("#2563eb"), width: 30, height: 30, fontSize: 12, cursor: "pointer" }} onClick={() => setPage("profile")}>{user.name[0].toUpperCase()}</div>
-              <button style={S.btn} onClick={() => { setUser(null); setPage("chat"); }}>Sign out</button>
+              <button style={S.btn} onClick={handleLogout}>Sign out</button>
             </>
           ) : (
             <>
