@@ -116,7 +116,7 @@
 | P4-20 | Frontend Halal filter | Section 4.6 | Halal pref builds dietary_tags:['Halal'] | Code review: sendMessage dietary tag building | `if (prefs.halal) dietaryTags.push('Halal')` | Confirmed in App.jsx | PASS | Manual check |
 | P4-21 | Frontend build success | Phase 4 delivery | Frontend builds without errors | `cd frontend && npm run build` | Build succeeds | Build succeeded (217 kB bundle) | PASS | Automated |
 | P4-22 | Seed 002 row counts | Phase 4 data | Relationship tables seeded correctly | Run `002_recipe_relationships.sql` verify query in Supabase | recipe_ingredients=64, recipe_dietary_tags=16, recipe_allergens=14 | User ran seed — verified counts match | PASS | Manual |
-| P4-23 | OpenAI model updated | Phase 4 chore | All 3 OpenAIService methods use gpt-4.1-nano | `grep -r "gpt-4o-mini" backend/src/` | No output | No remaining gpt-4o-mini references | PASS | Automated |
+| P4-23 | OpenAI model updated | Phase 4 chore | All 3 OpenAIService methods use gpt-4.1-nano-2025-04-14 | `grep -r "gpt-4o-mini" backend/src/` | No output | No remaining gpt-4o-mini references | PASS | Automated |
 
 ---
 
