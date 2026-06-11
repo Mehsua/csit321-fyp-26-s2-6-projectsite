@@ -28,7 +28,7 @@ describe('OpenAIService.extractIngredients', () => {
 
     expect(result).toEqual(['chicken', 'garlic', 'lemon']);
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-      model: 'gpt-4.1-nano',
+      model: 'gpt-4.1-nano-2025-04-14',
       messages: expect.arrayContaining([
         expect.objectContaining({ role: 'system' }),
         expect.objectContaining({ role: 'user', content: 'I have chicken, garlic and lemon' })
@@ -86,7 +86,7 @@ describe('OpenAIService.generateCookingInstructions', () => {
     expect(typeof result).toBe('string');
     expect(result.length).toBeGreaterThan(0);
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-      model: 'gpt-4.1-nano',
+      model: 'gpt-4.1-nano-2025-04-14',
       messages: expect.arrayContaining([
         expect.objectContaining({ role: 'user', content: expect.stringContaining('Lemon Garlic Chicken') })
       ])
@@ -123,7 +123,7 @@ describe('OpenAIService.chat', () => {
 
     expect(result).toBe('I found 3 recipes that match your ingredients!');
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-      model: 'gpt-4.1-nano',
+      model: 'gpt-4.1-nano-2025-04-14',
       messages: expect.arrayContaining([
         expect.objectContaining({ role: 'system' }),
         expect.objectContaining({ role: 'user', content: 'I have chicken and garlic' })
