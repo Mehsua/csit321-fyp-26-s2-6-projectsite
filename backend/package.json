@@ -1,0 +1,23 @@
+{
+  "name": "foodbot-backend",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "db:push": "npx supabase db push",
+    "db:reset": "npx supabase db reset"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "supabase": "^2.0.0"
+  }
+}
