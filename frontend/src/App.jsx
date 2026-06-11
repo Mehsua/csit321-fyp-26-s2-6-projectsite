@@ -92,44 +92,7 @@ function matchRecipes(inputText, userPrefs = {}) {
     })
     .filter(r => r && r.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-}
-
-// ─── Ollama API ───────────────────────────────────────────────────────────────
-async function askOllama(messages, onChunk) {
-  try {
-    const res = await fetch("http://localhost:11434/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "llama3.2",
-        messages,
-        stream: true,
-      }),
-    });
-    if (!res.ok) throw new Error("Ollama not reachable");
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let full = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value);
-      const lines = chunk.split("\n").filter(Boolean);
-      for (const line of lines) {
-        try {
-          const json = JSON.parse(line);
-          if (json.message?.content) {
-            full += json.message.content;
-            onChunk(full);
-          }
-        } catch {}
-      }
-    }
-    return full;
-  } catch {
-    return null;
-  }
+    .slice(0, 5);
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -137,7 +100,7 @@ const S = {
   app: { display: "flex", flexDirection: "column", height: "100vh", fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 14, color: "#1a1a1a", background: "#fff" },
   topbar: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: 48, borderBottom: "1px solid #e5e5e5", flexShrink: 0, background: "#fff" },
   logo: { display: "flex", alignItems: "center", gap: 8, fontWeight: 600, fontSize: 16 },
-  logoIcon: { width: 28, height: 28, background: "#16a34a", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 16 },
+  logoIcon: { width: 28, height: 28, background: "#16a34a", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 700 },
   topRight: { display: "flex", gap: 8, alignItems: "center" },
   btn: { padding: "5px 12px", borderRadius: 6, border: "1px solid #e5e5e5", background: "#fff", cursor: "pointer", fontSize: 13, color: "#555" },
   btnPrimary: { padding: "5px 12px", borderRadius: 6, border: "none", background: "#16a34a", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 500 },
@@ -171,7 +134,6 @@ const S = {
   inputWrap: { display: "flex", gap: 8, alignItems: "flex-end", border: "1px solid #d1d5db", borderRadius: 12, padding: "8px 12px", background: "#fff" },
   textarea: { flex: 1, border: "none", outline: "none", fontSize: 14, resize: "none", fontFamily: "inherit", lineHeight: 1.5, background: "transparent", color: "#1a1a1a" },
   sendBtn: { width: 34, height: 34, borderRadius: "50%", background: "#16a34a", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  inputHint: { fontSize: 11, color: "#aaa", textAlign: "center", marginTop: 6 },
   // Auth
   authPage: { display: "flex", flex: 1, alignItems: "center", justifyContent: "center", background: "#fafafa" },
   authCard: { background: "#fff", border: "1px solid #e5e5e5", borderRadius: 16, padding: 32, width: 360 },
@@ -267,7 +229,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [viewRecipe, setViewRecipe] = useState(null);
   const [favourites, setFavourites] = useState([]);
-  const [ollamaOnline, setOllamaOnline] = useState(null);
   const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
   const [authError, setAuthError] = useState("");
   const [sessionId, setSessionId] = useState(null);
@@ -310,11 +271,6 @@ export default function App() {
     initApp();
   }, []);
 
-  // Check Ollama on mount
-  useEffect(() => {
-    fetch("http://localhost:11434/api/tags").then(() => setOllamaOnline(true)).catch(() => setOllamaOnline(false));
-  }, []);
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
@@ -350,47 +306,45 @@ export default function App() {
     const isIngredientQuery = ingredientKeywords.some(k => msg.toLowerCase().includes(k)) || msg.includes(",");
     const matches = isIngredientQuery ? matchRecipes(msg, prefs) : [];
 
-    // Build system prompt
-    const systemPrompt = `You are RecipeBot, a friendly AI assistant for a recipe and cooking chatbot. You help users find recipes based on their ingredients, answer cooking questions, and provide customer support.
+    // Build message history for backend (user + assistant turns only)
+    const chatMessages = newMsgs
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({ role: m.role, content: m.content }));
 
-Current user: ${user ? user.name : "Guest"}
-User dietary preferences: ${Object.entries(prefs).filter(([k, v]) => v && k !== "allergens").map(([k]) => k).join(", ") || "none set"}
-User allergens: ${prefs.allergens.join(", ") || "none"}
+    // Keep only the last 20 messages to avoid exceeding backend limit
+    const windowedMessages = chatMessages.slice(-20);
 
-${matches.length > 0 ? `Recipe matching results have already been shown to the user for their ingredient query. The top match is "${matches[0].name}". Acknowledge these results briefly and offer to help further.` : ""}
+    // Add context about recipe matches to the last user message
+    const lastUserIdx = windowedMessages.length - 1;
+    if (matches.length > 0 && lastUserIdx >= 0) {
+      const context = `\n\n[Context: ${matches.length} recipe(s) found — top match: "${matches[0].name}" at ${Math.round(matches[0].score * 100)}% match]`;
+      const augmented = windowedMessages[lastUserIdx].content + context;
+      if (augmented.length <= 2000) {
+        windowedMessages[windowedMessages.length - 1] = { ...windowedMessages[windowedMessages.length - 1], content: augmented };
+      }
+    }
 
-Guidelines:
-- Be concise and friendly
-- For ingredient queries, the system already shows recipe cards, so just acknowledge them briefly
-- For cooking questions, give helpful practical advice
-- For customer support questions (account, how to use the app, etc.), explain clearly
-- Keep responses under 3 sentences unless detailed instructions are needed`;
-
-    const ollamaMessages = [
-      { role: "system", content: systemPrompt },
-      ...newMsgs.filter(m => m.role !== "system").map(m => ({ role: m.role, content: m.content }))
-    ];
-
-    // Streaming response
-    const botMsg = { role: "assistant", content: "", recipes: matches };
+    // Place bot message placeholder
+    const botMsg = { role: 'assistant', content: '', recipes: matches };
     const withBot = [...newMsgs, botMsg];
     updateMessages(withBot);
 
-    if (ollamaOnline) {
-      await askOllama(ollamaMessages, (partial) => {
-        setSessions(prev => prev.map(s =>
-          s.id === activeSession
-            ? { ...s, messages: s.messages.map((m, i) => i === s.messages.length - 1 ? { ...m, content: partial } : m) }
-            : s
-        ));
-      });
-    } else {
-      // Fallback responses
-      const fallback = matches.length > 0
-        ? `I found ${matches.length} recipe${matches.length > 1 ? "s" : ""} matching your ingredients! Check out "${matches[0].name}" — it's a ${Math.round(matches[0].score * 100)}% match. Let me know if you'd like substitution suggestions or more options.`
-        : `I can help with that! Try entering some ingredients you have on hand and I'll find matching recipes. You can also ask me cooking questions or get help with the app.`;
-
-      await new Promise(r => setTimeout(r, 600));
+    try {
+      const { reply } = await api.post('/api/chat', { messages: windowedMessages });
+      setSessions(prev => prev.map(s =>
+        s.id === activeSession
+          ? { ...s, messages: s.messages.map((m, i) => i === s.messages.length - 1 ? { ...m, content: reply } : m) }
+          : s
+      ));
+    } catch (err) {
+      let fallback;
+      if (err.status >= 400 && err.status < 500) {
+        fallback = 'Sorry, there was a problem with your message. Please try again with shorter text.';
+      } else if (matches.length > 0) {
+        fallback = `I found ${matches.length} recipe${matches.length > 1 ? 's' : ''} matching your ingredients! Try "${matches[0].name}".`;
+      } else {
+        fallback = 'I can help with that! Try entering some ingredients you have on hand.';
+      }
       setSessions(prev => prev.map(s =>
         s.id === activeSession
           ? { ...s, messages: s.messages.map((m, i) => i === s.messages.length - 1 ? { ...m, content: fallback } : m) }
@@ -506,7 +460,7 @@ Guidelines:
             <div key={i}>
               <div style={S.msgWrap(msg.role === "user")}>
                 <div style={S.avatar(msg.role === "user" ? "#2563eb" : "#16a34a")}>
-                  {msg.role === "user" ? (user?.name?.[0]?.toUpperCase() || "U") : "RB"}
+                  {msg.role === "user" ? (user?.name?.[0]?.toUpperCase() || "U") : "FB"}
                 </div>
                 <div style={{ maxWidth: "72%" }}>
                   {msg.content && <div style={S.bubble(msg.role === "user")}>{msg.content}</div>}
@@ -524,7 +478,7 @@ Guidelines:
 
           {loading && messages[messages.length - 1]?.role !== "assistant" && (
             <div style={S.msgWrap(false)}>
-              <div style={S.avatar("#16a34a")}>RB</div>
+              <div style={S.avatar("#16a34a")}>FB</div>
               <div style={{ ...S.bubble(false), color: "#999" }}>Thinking…</div>
             </div>
           )}
@@ -553,11 +507,6 @@ Guidelines:
             <button style={S.sendBtn} onClick={() => sendMessage()} aria-label="Send">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 8L2 2l2.5 6L2 14l12-6z" fill="#fff" /></svg>
             </button>
-          </div>
-          <div style={S.inputHint}>
-            {ollamaOnline === true && "🟢 Llama 3.2 connected via Ollama"}
-            {ollamaOnline === false && "🟡 Ollama offline — using fallback responses. Run: ollama serve"}
-            {ollamaOnline === null && "Checking Ollama…"}
           </div>
         </div>
       </>
@@ -705,7 +654,7 @@ Guidelines:
           <div style={{ textAlign: "center", marginBottom: 20 }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🍳</div>
             <div style={S.authTitle}>{isLogin ? "Welcome back" : "Create account"}</div>
-            <div style={S.authSub}>{isLogin ? "Sign in to RecipeBot" : "Join RecipeBot to save recipes"}</div>
+            <div style={S.authSub}>{isLogin ? "Sign in to FoodBot" : "Join FoodBot to save recipes"}</div>
           </div>
           {authError && <div style={{ background: "#fef2f2", color: "#dc2626", padding: "8px 12px", borderRadius: 8, fontSize: 13, marginBottom: 12 }}>{authError}</div>}
           <form onSubmit={isLogin ? handleLogin : handleRegister}>
@@ -739,8 +688,8 @@ Guidelines:
       {/* Topbar */}
       <div style={S.topbar}>
         <div style={S.logo} onClick={() => setPage("chat")} role="button" tabIndex={0}>
-          <div style={S.logoIcon}>RB</div>
-          RecipeBot
+          <div style={S.logoIcon}>FB</div>
+          FoodBot
         </div>
         <div style={S.topRight}>
           {user ? (
@@ -792,11 +741,6 @@ Guidelines:
 
         {/* Main content */}
         <div style={S.main}>
-          {ollamaOnline === false && page === "chat" && (
-            <div style={{ background: "#fffbeb", borderBottom: "1px solid #fde68a", padding: "8px 20px", fontSize: 13, color: "#92400e", display: "flex", alignItems: "center", gap: 8 }}>
-              ⚠ Ollama is not running. Start it with <code style={{ background: "#fef3c7", padding: "1px 6px", borderRadius: 4 }}>ollama serve</code> for Llama 3.2 responses.
-            </div>
-          )}
           {page === "chat" && renderChat()}
           {page === "login" && renderAuth(true)}
           {page === "register" && renderAuth(false)}
