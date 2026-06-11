@@ -12,6 +12,7 @@ function adaptRecipe(r) {
     cookTime: r.cooking_time,
     prepTime: 0,
     calories: r.nutrition?.calories ?? null,
+    nutrition: r.nutrition ?? null,
     ingredients: [...(r.matching_ingredients || []), ...(r.missing_ingredients || [])],
     instructions: r.instructions || '',
     dietary: r.dietary_tags || [],
@@ -133,15 +134,15 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions }) {
         {/* Ingredient checklist */}
         <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Ingredients</div>
         <div style={{ fontSize: 13, marginBottom: 16 }}>
-          {recipe.matched.map(i => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
+          {recipe.matched.map((i, idx) => (
+            <div key={`matched-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
               <span style={{ color: '#16a34a', fontSize: 16 }}>✓</span>
               <span>{i}</span>
               <span style={{ fontSize: 11, color: '#888', marginLeft: 'auto' }}>you have this</span>
             </div>
           ))}
-          {recipe.missing.map(i => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
+          {recipe.missing.map((i, idx) => (
+            <div key={`missing-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
               <span style={{ color: '#dc2626', fontSize: 16 }}>○</span>
               <span style={{ color: '#dc2626' }}>{i}</span>
               <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 8, border: '1px solid #fca5a5', color: '#dc2626', marginLeft: 'auto' }}>missing</span>
@@ -850,6 +851,7 @@ export default function App() {
           instructions={recipeInstructions[viewRecipe.recipe_id]}
           onFetchInstructions={async () => {
             const id = viewRecipe.recipe_id;
+            if (recipeInstructions[id]?.loading || recipeInstructions[id]?.steps) return;
             setRecipeInstructions(p => ({ ...p, [id]: { loading: true } }));
             try {
               const data = await api.get(`/api/recipes/${id}/instructions`);
