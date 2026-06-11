@@ -4,6 +4,15 @@ import IngredientConfirmMsg from './components/IngredientConfirmMsg';
 
 // ─── Recipe Adapter ────────────────────────────────────────────────────────────
 function adaptRecipe(r) {
+  const nutrition = r.nutrition
+    ? {
+        calories: r.nutrition.calories ?? null,
+        protein: r.nutrition.protein_g ?? r.nutrition.protein ?? null,
+        carbs: r.nutrition.carbs_g ?? r.nutrition.carbs ?? null,
+        fats: r.nutrition.fats_g ?? r.nutrition.fats ?? null,
+        fibre: r.nutrition.fibre_g ?? r.nutrition.fibre ?? null,
+      }
+    : null;
   return {
     id: r.recipe_id,
     recipe_id: r.recipe_id,
@@ -11,8 +20,8 @@ function adaptRecipe(r) {
     cuisine: r.category,
     cookTime: r.cooking_time,
     prepTime: 0,
-    calories: r.nutrition?.calories ?? null,
-    nutrition: r.nutrition ?? null,
+    calories: nutrition?.calories ?? null,
+    nutrition,
     ingredients: [...(r.matching_ingredients || []), ...(r.missing_ingredients || [])],
     instructions: r.instructions || '',
     dietary: r.dietary_tags || [],
@@ -95,7 +104,7 @@ const S = {
 };
 
 // ─── Components ───────────────────────────────────────────────────────────────
-function RecipeModal({ recipe, onClose, instructions, onFetchInstructions }) {
+function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSave, isSaved }) {
   const pct = Math.round((recipe.score ?? 0) * 100);
   const inst = instructions || {};
 
@@ -185,7 +194,12 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions }) {
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
-          <button style={{ ...S.recipeBtn, cursor: 'not-allowed', color: '#999', flex: 1 }} title="Coming soon">📅 Meal Plan</button>
+          <button style={{ ...S.recipeBtn, cursor: 'not-allowed', color: '#999', flex: 1 }} title="Coming in Phase 8">📅 Meal Plan</button>
+          {onSave && (
+            <button style={isSaved ? { ...S.recipeBtnPrimary, flex: 1 } : { ...S.recipeBtn, flex: 1 }} onClick={() => onSave(recipe)}>
+              {isSaved ? '✓ Saved' : '♡ Save'}
+            </button>
+          )}
           <button style={{ ...S.recipeBtnPrimary, flex: 1 }} onClick={onClose}>Done</button>
         </div>
       </div>
@@ -244,6 +258,7 @@ export default function App() {
   const [adminTab, setAdminTab] = useState("recipes");
   const [recipeInstructions, setRecipeInstructions] = useState({});
   const [helpOpen, setHelpOpen] = useState(false);
+  const [savePrefsStatus, setSavePrefsStatus] = useState(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -252,6 +267,39 @@ export default function App() {
 
   // JWT restore + guest session on mount
   useEffect(() => {
+    async function loadUserData() {
+      const [prefsData, favsData] = await Promise.all([
+        api.get('/api/users/me/preferences').catch(() => null),
+        api.get('/api/users/me/favourites').catch(() => null),
+      ]);
+      if (prefsData) {
+        setPrefs({
+          halal: prefsData.dietaryTags.includes('Halal'),
+          vegetarian: prefsData.dietaryTags.includes('Vegetarian'),
+          vegan: prefsData.dietaryTags.includes('Vegan'),
+          glutenFree: prefsData.dietaryTags.includes('GlutenFree'),
+          allergens: prefsData.allergenNames || [],
+        });
+      }
+      if (favsData?.favourites) {
+        setFavourites(favsData.favourites.map(f => ({
+          id: f.recipe_id,
+          recipe_id: f.recipe_id,
+          name: f.name,
+          cookTime: f.cooking_time,
+          score: f.score ?? 0,
+          matched: [],
+          missing: [],
+          dietary: f.dietary_tags || [],
+          allergens: f.allergens || [],
+          allergen_warning: false,
+          nutrition: f.nutrition || null,
+          calories: f.nutrition?.calories ?? null,
+          saved_at: f.saved_at,
+        })));
+      }
+    }
+
     async function initApp() {
       const storedToken = getToken();
       if (storedToken) {
@@ -265,6 +313,7 @@ export default function App() {
           });
           const session = await api.post("/api/sessions");
           setSessionId(session.session_id);
+          await loadUserData();
         } catch (_) {
           setToken(null);
           setUser(null);
@@ -367,8 +416,28 @@ export default function App() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   }
 
-  function saveToFavourites(recipe) {
-    setFavourites(prev => prev.find(f => f.id === recipe.id) ? prev : [...prev, recipe]);
+  async function saveToFavourites(recipe) {
+    if (favourites.some(f => f.id === recipe.id)) return;
+    if (user) {
+      try {
+        await api.post('/api/users/me/favourites', {
+          recipeId: recipe.recipe_id || recipe.id,
+          score: recipe.score ?? null,
+        });
+      } catch (err) {
+        if (err.status === 409) return;
+      }
+    }
+    setFavourites(prev => [...prev, recipe]);
+  }
+
+  async function removeFavourite(recipeId) {
+    if (user) {
+      try {
+        await api.delete(`/api/users/me/favourites/${recipeId}`);
+      } catch (_) {}
+    }
+    setFavourites(prev => prev.filter(f => f.id !== recipeId && f.recipe_id !== recipeId));
   }
 
   async function runRecommend(ingredients, confirmMsgId) {
@@ -440,6 +509,36 @@ export default function App() {
       setAuthError("");
       const session = await api.post("/api/sessions");
       setSessionId(session.session_id);
+      const [prefsData, favsData] = await Promise.all([
+        api.get('/api/users/me/preferences').catch(() => null),
+        api.get('/api/users/me/favourites').catch(() => null),
+      ]);
+      if (prefsData) {
+        setPrefs({
+          halal: prefsData.dietaryTags.includes('Halal'),
+          vegetarian: prefsData.dietaryTags.includes('Vegetarian'),
+          vegan: prefsData.dietaryTags.includes('Vegan'),
+          glutenFree: prefsData.dietaryTags.includes('GlutenFree'),
+          allergens: prefsData.allergenNames || [],
+        });
+      }
+      if (favsData?.favourites) {
+        setFavourites(favsData.favourites.map(f => ({
+          id: f.recipe_id,
+          recipe_id: f.recipe_id,
+          name: f.name,
+          cookTime: f.cooking_time,
+          score: f.score ?? 0,
+          matched: [],
+          missing: [],
+          dietary: f.dietary_tags || [],
+          allergens: f.allergens || [],
+          allergen_warning: false,
+          nutrition: f.nutrition || null,
+          calories: f.nutrition?.calories ?? null,
+          saved_at: f.saved_at,
+        })));
+      }
     } catch (err) {
       if (err.status === 423) {
         const lockUntil = err.data?.lock_until
@@ -644,6 +743,34 @@ export default function App() {
           <div style={{ fontSize: 12, color: "#999", marginTop: 10 }}>Recipes containing these allergens will be filtered out.</div>
         </div>
         <div style={S.profileCard}>
+          <button
+            style={{ ...S.formBtn, background: savePrefsStatus === 'saving' ? '#aaa' : '#16a34a' }}
+            disabled={savePrefsStatus === 'saving'}
+            onClick={async () => {
+              setSavePrefsStatus('saving');
+              try {
+                const dietaryTags = [
+                  prefs.halal && 'Halal',
+                  prefs.vegetarian && 'Vegetarian',
+                  prefs.vegan && 'Vegan',
+                  prefs.glutenFree && 'GlutenFree',
+                ].filter(Boolean);
+                await api.put('/api/users/me/preferences', {
+                  dietaryTags,
+                  allergenNames: prefs.allergens,
+                });
+                setSavePrefsStatus('saved');
+                setTimeout(() => setSavePrefsStatus(null), 2000);
+              } catch {
+                setSavePrefsStatus('error');
+                setTimeout(() => setSavePrefsStatus(null), 3000);
+              }
+            }}
+          >
+            {savePrefsStatus === 'saving' ? 'Saving…' : savePrefsStatus === 'saved' ? '✓ Saved!' : savePrefsStatus === 'error' ? 'Save failed — try again' : 'Save Preferences'}
+          </button>
+        </div>
+        <div style={S.profileCard}>
           <div style={S.sectionTitle}>Favourites</div>
           {favourites.length === 0
             ? <div style={{ fontSize: 13, color: "#999" }}>No saved recipes yet. Chat to find some!</div>
@@ -736,6 +863,54 @@ export default function App() {
     );
   }
 
+  function renderFavourites() {
+    const count = favourites.length;
+    const remaining = 50 - count;
+    return (
+      <div style={S.profilePage}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ fontSize: 20, fontWeight: 600 }}>My Favourites</div>
+          <span style={{ fontSize: 13, color: '#666' }}>{count} / 50</span>
+        </div>
+
+        {favourites.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#aaa' }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>♡</div>
+            <div style={{ fontSize: 13 }}>Save recipes from chat to see them here</div>
+          </div>
+        ) : (
+          favourites.map(r => {
+            const pct = Math.round((r.score ?? 0) * 100);
+            return (
+              <div key={r.id || r.recipe_id} style={{ ...S.recipeCard, marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <div style={S.recipeTitle}>{r.name}</div>
+                  {pct > 0 && <span style={S.badge(pct >= 70 ? 'match' : pct >= 40 ? 'warn' : 'red')}>{pct}%</span>}
+                </div>
+                <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>
+                  {r.saved_at && `Saved ${new Date(r.saved_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · `}
+                  {r.dietary?.slice(0, 3).map(d => (
+                    <span key={d} style={{ ...S.badge('match'), marginRight: 4 }}>{d}</span>
+                  ))}
+                </div>
+                <div style={S.recipeBtns}>
+                  <button style={S.recipeBtnPrimary} onClick={() => setViewRecipe(r)}>View Recipe</button>
+                  <button style={{ ...S.recipeBtn, color: '#999', borderColor: '#ddd', cursor: 'not-allowed' }} title="Coming in Phase 8">📅 Add to Plan</button>
+                  <button style={{ ...S.recipeBtn, color: '#dc2626', borderColor: '#fca5a5' }}
+                    onClick={() => removeFavourite(r.id || r.recipe_id)}>✕ Remove</button>
+                </div>
+              </div>
+            );
+          })
+        )}
+
+        <div style={{ marginTop: 16, background: '#f5f5f5', border: '1px solid #ddd', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: '#777', textAlign: 'center' }}>
+          Max 50 favourites per account &nbsp;|&nbsp; <strong>{remaining} remaining</strong>
+        </div>
+      </div>
+    );
+  }
+
   function renderAuth(isLogin) {
     return (
       <div style={S.authPage}>
@@ -791,7 +966,8 @@ export default function App() {
           {user ? (
             <>
               {user.isAdmin && <button style={{ ...S.btn, color: page === "admin" ? "#16a34a" : "#555" }} onClick={() => setPage("admin")}>Admin</button>}
-              <button style={{ ...S.btn, color: page === "profile" ? "#16a34a" : "#555" }} onClick={() => setPage("profile")}>👤 Profile</button>
+              <button title="My Favourites" style={{ ...S.btn, color: page === "favourites" ? "#16a34a" : "#555" }} onClick={() => setPage("favourites")}>♡</button>
+              <button style={{ ...S.btn, color: page === "profile" ? "#16a34a" : "#555" }} title="👤 Profile" onClick={() => setPage("profile")}>👤 Profile</button>
               <div style={{ ...S.avatar("#2563eb"), width: 30, height: 30, fontSize: 12, cursor: "pointer" }} onClick={() => setPage("profile")}>{user?.name?.[0]?.toUpperCase() || '?'}</div>
               <button style={S.btn} onClick={handleLogout}>Sign out</button>
             </>
@@ -841,6 +1017,7 @@ export default function App() {
           {page === "login" && renderAuth(true)}
           {page === "register" && renderAuth(false)}
           {page === "profile" && user && renderProfile()}
+          {page === "favourites" && user && renderFavourites()}
           {page === "admin" && user?.isAdmin && renderAdmin()}
         </div>
       </div>
@@ -851,6 +1028,8 @@ export default function App() {
           recipe={viewRecipe}
           onClose={() => setViewRecipe(null)}
           instructions={recipeInstructions[viewRecipe.recipe_id]}
+          onSave={saveToFavourites}
+          isSaved={favourites.some(f => f.id === viewRecipe.id || f.id === viewRecipe.recipe_id)}
           onFetchInstructions={async () => {
             const id = viewRecipe.recipe_id;
             if (recipeInstructions[id]?.loading || recipeInstructions[id]?.steps) return;

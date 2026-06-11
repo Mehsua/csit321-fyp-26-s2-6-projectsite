@@ -9,6 +9,7 @@ const authRouter = require('./src/routes/auth');
 const sessionsRouter = require('./src/routes/sessions');
 const chatRouter = require('./src/routes/chat');
 const recipeRouter = require('./src/routes/recipes');
+const usersRouter = require('./src/routes/users');
 const errorHandler = require('./src/middleware/errorHandler');
 
 const app = express();
@@ -34,6 +35,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/recipes', recipeRouter);
+app.use('/api/users', usersRouter);
 
 app.use(errorHandler);
 

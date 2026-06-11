@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('./lib/api', () => ({
-  api: { get: vi.fn(), post: vi.fn() },
+  api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
   setToken: vi.fn(),
   getToken: vi.fn(() => null),
 }));
@@ -34,6 +34,8 @@ function setupMocks() {
     if (url === '/api/chat') return Promise.resolve({ reply: 'Sure, I can help!' });
     return Promise.resolve({});
   });
+  api.put.mockResolvedValue({ message: 'Preferences saved' });
+  api.delete.mockResolvedValue({});
 }
 
 beforeEach(() => {
@@ -156,8 +158,11 @@ describe('Guest mode banner', () => {
       if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
       return Promise.resolve({});
     });
-    api.get.mockResolvedValueOnce({
-      user: { name: 'Alice', email: 'alice@test.com', role: 'registered' },
+    api.get.mockImplementation((url) => {
+      if (url === '/api/auth/me') return Promise.resolve({ user: { name: 'Alice', email: 'alice@test.com', role: 'registered' } });
+      if (url === '/api/users/me/preferences') return Promise.resolve({ dietaryTags: [], allergenNames: [] });
+      if (url === '/api/users/me/favourites') return Promise.resolve({ count: 0, remaining: 50, favourites: [] });
+      return Promise.resolve({});
     });
     // getToken returns a value so initApp tries /api/auth/me
     const { getToken } = await import('./lib/api');
@@ -186,5 +191,238 @@ describe('Login page: Continue as Guest', () => {
     await user.click(signInBtn);
     await user.click(screen.getByText(/Continue as Guest/i));
     expect(await screen.findByPlaceholderText(/Type ingredients or ask a question/i)).toBeInTheDocument();
+  });
+});
+
+describe('Nutrition card in RecipeModal', () => {
+  it('shows nutrition values when recipe has nutrition data', async () => {
+    const recipeWithNutrition = {
+      ...mockRecipe,
+      nutrition: { calories: 285, protein_g: 35, carbs_g: 5, fats_g: 14, fibre_g: 0.5 },
+    };
+    api.post.mockImplementation((url) => {
+      if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
+      if (url === '/api/chat/extract-ingredients') return Promise.resolve({ ingredients: ['chicken', 'garlic'] });
+      if (url === '/api/recipes/recommend') return Promise.resolve({ recipes: [recipeWithNutrition] });
+      if (url === '/api/chat') return Promise.resolve({ reply: 'Sure!' });
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const textarea = await screen.findByPlaceholderText(/Type ingredients or ask a question/i);
+    await user.type(textarea, 'I have chicken and garlic');
+    await user.keyboard('{Enter}');
+    await user.click(await screen.findByRole('button', { name: /Yes, find recipes/i }));
+    await screen.findByText('Chicken Tomato Pasta');
+    await user.click(screen.getByRole('button', { name: /View instructions/i }));
+
+    // nutrition card should show kcal value
+    expect(await screen.findByText('285')).toBeInTheDocument();
+    // protein/carbs/fats labels should be present
+    expect(screen.getByText('protein')).toBeInTheDocument();
+    expect(screen.getByText('carbs')).toBeInTheDocument();
+    expect(screen.getByText('fats')).toBeInTheDocument();
+  });
+});
+
+describe('Load preferences from API on auth restore', () => {
+  it('calls GET /api/users/me/preferences when token present on mount', async () => {
+    const { getToken } = await import('./lib/api');
+    getToken.mockReturnValue('fake-token');
+
+    api.get.mockImplementation((url) => {
+      if (url === '/api/auth/me') return Promise.resolve({ user: { name: 'Alice', email: 'alice@test.com', role: 'registered' } });
+      if (url === '/api/users/me/preferences') return Promise.resolve({ dietaryTags: ['Halal'], allergenNames: [] });
+      if (url === '/api/users/me/favourites') return Promise.resolve({ count: 0, remaining: 50, favourites: [] });
+      return Promise.resolve({});
+    });
+    api.post.mockImplementation((url) => {
+      if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
+      return Promise.resolve({});
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledWith('/api/users/me/preferences');
+    });
+  });
+});
+
+describe('Favourites: API-backed save when logged in', () => {
+  it('calls POST /api/users/me/favourites when logged-in user saves a recipe', async () => {
+    const { getToken } = await import('./lib/api');
+    getToken.mockReturnValue('fake-token');
+
+    api.get.mockImplementation((url) => {
+      if (url === '/api/auth/me') return Promise.resolve({ user: { name: 'Alice', email: 'alice@test.com', role: 'registered' } });
+      if (url === '/api/users/me/preferences') return Promise.resolve({ dietaryTags: [], allergenNames: [] });
+      if (url === '/api/users/me/favourites') return Promise.resolve({ count: 0, remaining: 50, favourites: [] });
+      return Promise.resolve({});
+    });
+    api.post.mockImplementation((url) => {
+      if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
+      if (url === '/api/chat/extract-ingredients') return Promise.resolve({ ingredients: ['chicken'] });
+      if (url === '/api/recipes/recommend') return Promise.resolve({ recipes: [mockRecipe] });
+      if (url === '/api/users/me/favourites') return Promise.resolve({ message: 'Saved to favourites' });
+      if (url === '/api/chat') return Promise.resolve({ reply: 'OK' });
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Wait for auth restore
+    await waitFor(() => screen.queryByText(/Guest Mode/i) === null);
+
+    const textarea = await screen.findByPlaceholderText(/Type ingredients or ask a question/i);
+    await user.type(textarea, 'I have chicken');
+    await user.keyboard('{Enter}');
+    await user.click(await screen.findByRole('button', { name: /Yes, find recipes/i }));
+    await screen.findByText('Chicken Tomato Pasta');
+
+    // Click the Save (♡ Save) button on the recipe card
+    await user.click(screen.getByRole('button', { name: /♡ Save/i }));
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/api/users/me/favourites', expect.objectContaining({
+        recipeId: '1',
+      }));
+    });
+  });
+});
+
+describe('Profile page: Save Preferences button', () => {
+  it('shows Save Preferences button on profile page when logged in', async () => {
+    const { getToken } = await import('./lib/api');
+    getToken.mockReturnValue('fake-token');
+
+    api.get.mockImplementation((url) => {
+      if (url === '/api/auth/me') return Promise.resolve({ user: { name: 'Alice', email: 'alice@test.com', role: 'registered' } });
+      if (url === '/api/users/me/preferences') return Promise.resolve({ dietaryTags: [], allergenNames: [] });
+      if (url === '/api/users/me/favourites') return Promise.resolve({ count: 0, remaining: 50, favourites: [] });
+      return Promise.resolve({});
+    });
+    api.post.mockImplementation((url) => {
+      if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await waitFor(() => screen.queryByText(/Guest Mode/i) === null);
+    const profileBtn = await screen.findByTitle('👤 Profile');
+    await user.click(profileBtn);
+
+    expect(screen.getByRole('button', { name: /Save Preferences/i })).toBeInTheDocument();
+  });
+
+  it('calls PUT /api/users/me/preferences when Save Preferences is clicked', async () => {
+    const { getToken } = await import('./lib/api');
+    getToken.mockReturnValue('fake-token');
+
+    api.get.mockImplementation((url) => {
+      if (url === '/api/auth/me') return Promise.resolve({ user: { name: 'Alice', email: 'alice@test.com', role: 'registered' } });
+      if (url === '/api/users/me/preferences') return Promise.resolve({ dietaryTags: [], allergenNames: [] });
+      if (url === '/api/users/me/favourites') return Promise.resolve({ count: 0, remaining: 50, favourites: [] });
+      return Promise.resolve({});
+    });
+    api.post.mockImplementation((url) => {
+      if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
+      return Promise.resolve({});
+    });
+    api.put.mockResolvedValue({ message: 'Preferences saved' });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await waitFor(() => screen.queryByText(/Guest Mode/i) === null);
+    const profileBtn = await screen.findByTitle('👤 Profile');
+    await user.click(profileBtn);
+
+    await user.click(screen.getByRole('button', { name: /Save Preferences/i }));
+
+    await waitFor(() => {
+      expect(api.put).toHaveBeenCalledWith('/api/users/me/preferences', expect.objectContaining({
+        dietaryTags: expect.any(Array),
+        allergenNames: expect.any(Array),
+      }));
+    });
+  });
+});
+
+describe('Favourites page', () => {
+  it('shows Favourites topbar button when logged in', async () => {
+    const { getToken } = await import('./lib/api');
+    getToken.mockReturnValue('fake-token');
+
+    api.get.mockImplementation((url) => {
+      if (url === '/api/auth/me') return Promise.resolve({ user: { name: 'Alice', email: 'alice@test.com', role: 'registered' } });
+      if (url === '/api/users/me/preferences') return Promise.resolve({ dietaryTags: [], allergenNames: [] });
+      if (url === '/api/users/me/favourites') return Promise.resolve({ count: 0, remaining: 50, favourites: [] });
+      return Promise.resolve({});
+    });
+    api.post.mockImplementation((url) => {
+      if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
+      return Promise.resolve({});
+    });
+
+    render(<App />);
+
+    await waitFor(() => screen.queryByText(/Guest Mode/i) === null);
+    expect(screen.getByTitle('My Favourites')).toBeInTheDocument();
+  });
+
+  it('navigates to favourites page and shows saved recipe', async () => {
+    const { getToken } = await import('./lib/api');
+    getToken.mockReturnValue('fake-token');
+
+    api.get.mockImplementation((url) => {
+      if (url === '/api/auth/me') return Promise.resolve({ user: { name: 'Alice', email: 'alice@test.com', role: 'registered' } });
+      if (url === '/api/users/me/preferences') return Promise.resolve({ dietaryTags: [], allergenNames: [] });
+      if (url === '/api/users/me/favourites') return Promise.resolve({
+        count: 1, remaining: 49,
+        favourites: [{
+          recipe_id: 'r-01', name: 'Chicken Rendang', cooking_time: 45,
+          score: 0.92, saved_at: '2026-06-11T10:00:00Z',
+          dietary_tags: ['Halal'], allergens: [], nutrition: null,
+        }],
+      });
+      return Promise.resolve({});
+    });
+    api.post.mockImplementation((url) => {
+      if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await waitFor(() => screen.queryByText(/Guest Mode/i) === null);
+    await user.click(screen.getByTitle('My Favourites'));
+
+    expect(await screen.findByText('My Favourites')).toBeInTheDocument();
+    expect(screen.getByText('Chicken Rendang')).toBeInTheDocument();
+    expect(screen.getByText('1 / 50')).toBeInTheDocument();
+  });
+});
+
+describe('RecipeModal Save Favourite button', () => {
+  it('shows save favourite button in recipe detail modal', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const textarea = await screen.findByPlaceholderText(/Type ingredients or ask a question/i);
+    await user.type(textarea, 'I have chicken and garlic');
+    await user.keyboard('{Enter}');
+    await user.click(await screen.findByRole('button', { name: /Yes, find recipes/i }));
+    await screen.findByText('Chicken Tomato Pasta');
+    await user.click(screen.getByRole('button', { name: /View instructions/i }));
+
+    const saveBtns = await screen.findAllByRole('button', { name: /♡ Save|✓ Saved/i });
+    expect(saveBtns.length).toBeGreaterThanOrEqual(2); // one in card, one in modal
   });
 });
