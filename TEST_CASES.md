@@ -92,7 +92,31 @@
 
 ## Phase 4 — Recipe API + Recommendation Engine
 
-> Test cases to be written when Phase 4 is planned.
+| ID | Feature | Spec Reference | Test Scenario | Test Steps | Expected Result | Actual Result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|---|---|
+| P4-01 | Recommend — success | Section 4.3 recommendation | Valid ingredients returns scored recipes | `POST /api/recipes/recommend { ingredients: ["chicken","garlic"] }` (RecipeService mocked) | HTTP 200, `{ recipes: [...] }` with score field | Jest: recipe.search.routes.test.js "returns 200 with recipes array" PASS | PASS | Automated |
+| P4-02 | Recommend — empty ingredients | Input validation | Empty ingredients array returns 400 | `POST /api/recipes/recommend { ingredients: [] }` | HTTP 400, body.error defined | Jest: "returns 400 when ingredients is empty array" PASS | PASS | Automated |
+| P4-03 | Recommend — not array | Input validation | Non-array ingredients returns 400 | `POST /api/recipes/recommend { ingredients: "chicken" }` | HTTP 400, body.error defined | Jest: "returns 400 when ingredients is not an array" PASS | PASS | Automated |
+| P4-04 | Recommend — empty strings | Input validation | Array with empty strings returns 400 | `POST /api/recipes/recommend { ingredients: ["", "chicken"] }` | HTTP 400, body.error defined | Jest: "returns 400 when ingredients array contains empty strings" PASS | PASS | Automated |
+| P4-05 | Recommend — dietary filter | Section 4.6 Stage 1 dietary exclusion | dietary_tags filter excludes non-matching recipes | `POST /api/recipes/recommend { ingredients:["garlic","chicken"], dietary_tags:["Halal"] }` (mocked) | Service called with dietaryTags:["Halal"] | Jest: "passes dietary_tags and allergen_names to RecipeService" PASS | PASS | Automated |
+| P4-06 | Recommend — empty results | Section 4.3 | No matches returns 200 with empty array | `POST /api/recipes/recommend { ingredients:["tofu"] }` (mock returns []) | HTTP 200, `{ recipes: [] }` | Jest: "returns 200 with empty array when no matches" PASS | PASS | Automated |
+| P4-07 | Recommend — service error | Section 2.2 graceful degradation | DB error returns 500 | `POST /api/recipes/recommend` (service throws) | HTTP 500 | Jest: "returns 500 when RecipeService throws" PASS | PASS | Automated |
+| P4-08 | Recipe detail — success | Section 4.3 | Valid recipe ID returns full data | `GET /api/recipes/r-uuid-1` (RecipeService.getById mocked) | HTTP 200, `{ recipe: { recipe_id, name, ... } }` | Jest: "returns 200 with full recipe data for a valid id" PASS | PASS | Automated |
+| P4-09 | Recipe detail — not found | Section 4.3 | Invalid ID returns 404 | `GET /api/recipes/00000000...` (mock returns null) | HTTP 404, body.error defined | Jest: "returns 404 when recipe does not exist" PASS | PASS | Automated |
+| P4-10 | Recipe detail — service error | Section 2.2 | DB error returns 500 | `GET /api/recipes/r-uuid-1` (service throws) | HTTP 500 | Jest: "returns 500 when RecipeService throws" PASS | PASS | Automated |
+| P4-11 | RecipeService scoring | Section 4.3 formula | Score = matching/total − missing×0.05 | RecipeService.recommend(['chicken','garlic']), 4-ingredient recipe | chicken+garlic match=2, missing=2, score=2/4−2×0.05=0.4 | Jest: recipe.service.test.js "returns scored recipes sorted by score descending" PASS | PASS | Automated |
+| P4-12 | RecipeService — top 5 cap | Section 4.3 top 5 | Returns at most 5 results | 8 matching recipes in mock | Results length ≤ 5 | Jest: "returns at most 5 results even when more recipes match" PASS | PASS | Automated |
+| P4-13 | RecipeService — dietary exclusion | Section 4.6 Stage 1 | Hard exclusion removes non-matching recipes | dietaryTags:['Halal'] with 2 recipes (one Halal, one Vegetarian-only) | Only Halal recipe in results | Jest: "excludes recipes that do not have all requested dietary tags" PASS | PASS | Automated |
+| P4-14 | RecipeService — allergen warning | Section 4.6 Stage 2 soft flag | allergen_warning=true for matching allergen | allergenNames:['Gluten'] with pasta recipe (Gluten allergen) | results[0].allergen_warning=true, recipe still included | Jest: "flags allergen_warning when recipe contains a user allergen" PASS | PASS | Automated |
+| P4-15 | RecipeService — case-insensitive allergen | Section 4.6 | Allergen matching is case-insensitive | allergenNames:['egg'] vs recipe allergen 'Eggs' | allergen_warning=true | Jest: "allergen matching is case-insensitive and handles egg vs Eggs" PASS | PASS | Automated |
+| P4-16 | RecipeService — getById not found | Section 4.3 | Non-existent recipe ID returns null | supabaseAdmin returns PGRST116 error | Returns null (no throw) | Jest: "returns null when Supabase returns PGRST116" PASS | PASS | Automated |
+| P4-17 | RecipeService — inactive recipe | Section 4.8 soft-delete | Inactive recipe excluded from getById | recipe.is_active=false | Returns null | Jest: "returns null when recipe is inactive" PASS | PASS | Automated |
+| P4-18 | Frontend RECIPES removed | Phase 4 objective | RECIPES constant no longer in App.jsx | `grep -n "RECIPES\|matchRecipes" frontend/src/App.jsx` | No output | grep returns empty | PASS | Manual check |
+| P4-19 | Frontend calls recommend API | Phase 4 objective | Ingredient query hits backend API | Code review: sendMessage in App.jsx | `api.post('/api/chat/extract-ingredients', ...)` then `api.post('/api/recipes/recommend', ...)` present | Confirmed in App.jsx (lines ~237, ~245) | PASS | Manual check |
+| P4-20 | Frontend Halal filter | Section 4.6 | Halal pref builds dietary_tags:['Halal'] | Code review: sendMessage dietary tag building | `if (prefs.halal) dietaryTags.push('Halal')` | Confirmed in App.jsx | PASS | Manual check |
+| P4-21 | Frontend build success | Phase 4 delivery | Frontend builds without errors | `cd frontend && npm run build` | Build succeeds | Build succeeded (217 kB bundle) | PASS | Automated |
+| P4-22 | Seed 002 row counts | Phase 4 data | Relationship tables seeded correctly | Run `002_recipe_relationships.sql` verify query in Supabase | recipe_ingredients=64, recipe_dietary_tags=16, recipe_allergens=14 | User ran seed — verified counts match | PASS | Manual |
+| P4-23 | OpenAI model updated | Phase 4 chore | All 3 OpenAIService methods use gpt-4.1-nano | `grep -r "gpt-4o-mini" backend/src/` | No output | No remaining gpt-4o-mini references | PASS | Automated |
 
 ---
 
