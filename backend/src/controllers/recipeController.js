@@ -1,5 +1,6 @@
 const { supabaseAdmin } = require('../db/supabase');
 const OpenAIService = require('../services/OpenAIService');
+const RecipeService = require('../services/RecipeService');
 
 let openAIService;
 function getOpenAIService() {
@@ -9,6 +10,10 @@ function getOpenAIService() {
 
 function resetOpenAIService() {
   openAIService = null;
+}
+
+function getRecipeService() {
+  return new RecipeService();
 }
 
 async function getInstructions(req, res, next) {
@@ -46,4 +51,35 @@ async function getInstructions(req, res, next) {
   }
 }
 
-module.exports = { getInstructions, resetOpenAIService };
+async function recommend(req, res, next) {
+  try {
+    const { ingredients, dietary_tags = [], allergen_names = [] } = req.body;
+    if (!Array.isArray(ingredients) || ingredients.length === 0 ||
+        !ingredients.every(i => typeof i === 'string' && i.trim().length > 0)) {
+      return res.status(400).json({ error: 'ingredients must be a non-empty array of strings' });
+    }
+    const recipes = await getRecipeService().recommend({
+      ingredients,
+      dietaryTags: dietary_tags,
+      allergenNames: allergen_names
+    });
+    return res.status(200).json({ recipes });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getById(req, res, next) {
+  try {
+    const { id } = req.params;
+    const recipe = await getRecipeService().getById(id);
+    if (!recipe) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+    return res.status(200).json({ recipe });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { getInstructions, resetOpenAIService, recommend, getById };
