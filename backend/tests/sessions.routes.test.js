@@ -53,4 +53,22 @@ describe('POST /api/sessions', () => {
     expect(res.body.user_id).toBe('uuid-auth');
     expect(SessionService.createAuthSession).toHaveBeenCalledWith('uuid-auth');
   });
+
+  test('falls back to guest session when token is expired or invalid', async () => {
+    supabaseAdmin.auth.getUser.mockResolvedValue({
+      data: { user: null }, error: { message: 'invalid JWT' },
+    });
+    SessionService.createGuestSession.mockResolvedValue({
+      session_id: 'sess-fallback-uuid', user_id: null, is_active: true,
+    });
+
+    const res = await request(app)
+      .post('/api/sessions')
+      .set('Authorization', 'Bearer expired-or-invalid-token');
+
+    expect(res.status).toBe(201);
+    expect(res.body.user_id).toBeNull();
+    expect(SessionService.createGuestSession).toHaveBeenCalled();
+    expect(SessionService.createAuthSession).not.toHaveBeenCalled();
+  });
 });

@@ -16,7 +16,7 @@ class SessionService {
       .select('session_id, user_id, is_active, created_at, expires_at')
       .single();
 
-    if (error) throw Object.assign(new Error('Failed to create guest session: ' + error.message), { status: 500 });
+    if (error) throw Object.assign(new Error('Failed to create session.'), { status: 500 });
     return data;
   }
 
@@ -33,7 +33,7 @@ class SessionService {
       .select('session_id, user_id, is_active, created_at, expires_at')
       .single();
 
-    if (error) throw Object.assign(new Error('Failed to create auth session: ' + error.message), { status: 500 });
+    if (error) throw Object.assign(new Error('Failed to create session.'), { status: 500 });
     return data;
   }
 }

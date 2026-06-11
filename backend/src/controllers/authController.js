@@ -23,7 +23,11 @@ async function login(req, res, next) {
     const result = await AuthService.login({ email, password });
     res.status(200).json(result);
   } catch (err) {
-    if (err.status) return res.status(err.status).json({ error: err.message, lock_until: err.lock_until });
+    if (err.status) {
+      const body = { error: err.message };
+      if (err.lock_until) body.lock_until = err.lock_until;
+      return res.status(err.status).json(body);
+    }
     next(err);
   }
 }

@@ -19,7 +19,7 @@ class AuthService {
           msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already exists')) {
         throw Object.assign(new Error('Account already exists'), { status: 409 });
       }
-      throw Object.assign(new Error('Registration failed: ' + msg), { status: 500 });
+      throw Object.assign(new Error('Registration failed. Please try again.'), { status: 500 });
     }
 
     const authUserId = authData.user.id;
@@ -40,7 +40,7 @@ class AuthService {
 
     if (dbError) {
       await supabaseAdmin.auth.admin.deleteUser(authUserId).catch(() => {});
-      throw Object.assign(new Error('Failed to create user profile: ' + dbError.message), { status: 500 });
+      throw Object.assign(new Error('Registration failed. Please try again.'), { status: 500 });
     }
 
     return userRow;
