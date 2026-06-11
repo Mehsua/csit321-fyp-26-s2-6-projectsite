@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { api, setToken, getToken } from "./lib/api";
 import IngredientConfirmMsg from './components/IngredientConfirmMsg';
 import ShoppingListPage from './components/ShoppingListPage';
+import MealPlanPage from './components/MealPlanPage';
 
 // ─── Recipe Adapter ────────────────────────────────────────────────────────────
 function adaptRecipe(r) {
@@ -105,7 +106,7 @@ const S = {
 };
 
 // ─── Components ───────────────────────────────────────────────────────────────
-function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSave, isSaved, onAddToList }) {
+function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSave, isSaved, onAddToList, onAddToMealPlan, user }) {
   const pct = Math.round((recipe.score ?? 0) * 100);
   const inst = instructions || {};
 
@@ -195,8 +196,15 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
-          <button style={{ ...S.recipeBtn, cursor: 'not-allowed', color: '#999', flex: 1 }} title="Coming in Phase 8">📅 Meal Plan</button>
           <button style={{ ...S.recipeBtn, flex: 1 }} onClick={() => onAddToList && onAddToList(recipe)} title="Add missing ingredients to shopping list">🛒 Add to List</button>
+          {user && (
+            <button
+              style={{ ...S.btn, fontSize: 12, padding: '6px 12px', background: '#f0fdf4', borderColor: '#16a34a', color: '#16a34a', flex: 1 }}
+              onClick={() => onAddToMealPlan && onAddToMealPlan(recipe)}
+            >
+              📅 Add to Meal Plan
+            </button>
+          )}
           {onSave && (
             <button style={isSaved ? { ...S.recipeBtnPrimary, flex: 1 } : { ...S.recipeBtn, flex: 1 }} onClick={() => onSave(recipe)}>
               {isSaved ? '✓ Saved' : '♡ Save'}
@@ -243,7 +251,10 @@ function RecipeCardMsg({ recipe, onView, onSave, saved, onAddToList }) {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [page, setPage] = useState("chat"); // chat | login | register | profile | admin | favourites
+  const [page, setPage] = useState("chat"); // chat | login | register | profile | admin | favourites | shopping-list | meal-plan
+  const [confirmedIngredients, setConfirmedIngredients] = useState([]);
+  const [mealPlan, setMealPlan] = useState(null);
+  const [mealPlanLoading, setMealPlanLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [sessions, setSessions] = useState([{ id: 1, title: "New chat", messages: [] }]);
   const [activeSession, setActiveSession] = useState(1);
@@ -479,6 +490,7 @@ export default function App() {
         ? { ...s, messages: s.messages.map((m) => m.id === confirmMsgId ? { ...m, confirmed: true, ingredients } : m) }
         : s
     ));
+    setConfirmedIngredients(ingredients);
 
     setLoading(true);
 
@@ -641,6 +653,85 @@ export default function App() {
     if (user) {
       await api.delete('/api/shopping-list').catch(() => null);
     }
+  }
+
+  async function generateMealPlan() {
+    if (!user) return;
+    setMealPlanLoading(true);
+    try {
+      const generated = await api.post('/api/meal-plan/generate', {
+        sessionIngredients: confirmedIngredients,
+        numDays: 3,
+      });
+      let { plan } = await api.get('/api/meal-plan');
+      if (plan) {
+        const perishMap = {};
+        for (const genDay of (generated.days || [])) {
+          for (const r of (genDay.recipes || [])) {
+            perishMap[r.recipe_id] = r.perishable_warnings || [];
+          }
+        }
+        const annotatedDays = plan.days.map(d => ({
+          ...d,
+          items: d.items.map(item => ({
+            ...item,
+            perishable_warnings: perishMap[item.recipe_id] || [],
+          })),
+        }));
+        plan = { ...plan, days: annotatedDays };
+      }
+      setMealPlan(plan);
+      setPage('meal-plan');
+    } catch (_) {
+    } finally {
+      setMealPlanLoading(false);
+    }
+  }
+
+  async function deleteMealPlanItem(itemId) {
+    try {
+      await api.delete(`/api/meal-plan/items/${itemId}`);
+      setMealPlan(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          days: prev.days.map(d => ({
+            ...d,
+            items: d.items.filter(i => i.item_id !== itemId),
+          })),
+        };
+      });
+    } catch (_) {}
+  }
+
+  async function addRecipeToMealPlan(recipe) {
+    if (!user) return;
+    try {
+      await api.post('/api/meal-plan/items', { recipeId: recipe.recipe_id, dayNumber: 1 });
+      const { plan } = await api.get('/api/meal-plan');
+      setMealPlan(plan);
+    } catch (_) {}
+  }
+
+  async function handleAddToShoppingListFromPlan() {
+    if (!mealPlan) return;
+    const allRecipes = mealPlan.days.flatMap(d => d.items);
+    for (const item of allRecipes) {
+      if (item.recipe_id) {
+        try {
+          await api.post('/api/shopping-list/generate', {
+            recipeId: item.recipe_id,
+            sessionIngredients: confirmedIngredients,
+          });
+        } catch (_) {}
+      }
+    }
+    // Refresh shopping list state after generating all items
+    try {
+      const data = await api.get('/api/shopping-list');
+      setShoppingListItems(data.items || []);
+    } catch (_) {}
+    setPage('shopping-list');
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -1028,6 +1119,13 @@ export default function App() {
             <>
               {user.isAdmin && <button style={{ ...S.btn, color: page === "admin" ? "#16a34a" : "#555" }} onClick={() => setPage("admin")}>Admin</button>}
               <button title="My Favourites" style={{ ...S.btn, color: page === "favourites" ? "#16a34a" : "#555" }} onClick={() => setPage("favourites")}>♡</button>
+              <button
+                title="Meal Plan"
+                style={{ ...S.btn, color: page === 'meal-plan' ? '#16a34a' : '#555' }}
+                onClick={() => setPage('meal-plan')}
+              >
+                📅
+              </button>
               <button style={{ ...S.btn, color: page === "profile" ? "#16a34a" : "#555" }} title="👤 Profile" onClick={() => setPage("profile")}>👤 Profile</button>
               <div style={{ ...S.avatar("#2563eb"), width: 30, height: 30, fontSize: 12, cursor: "pointer" }} onClick={() => setPage("profile")}>{user?.name?.[0]?.toUpperCase() || '?'}</div>
               <button style={S.btn} onClick={handleLogout}>Sign out</button>
@@ -1094,6 +1192,16 @@ export default function App() {
               onClear={clearShoppingList}
             />
           )}
+          {page === 'meal-plan' && user && (
+            <MealPlanPage
+              plan={mealPlan}
+              onBack={() => setPage('chat')}
+              onRemoveItem={deleteMealPlanItem}
+              onGeneratePlan={generateMealPlan}
+              onAddToShoppingList={handleAddToShoppingListFromPlan}
+              loading={mealPlanLoading}
+            />
+          )}
         </div>
       </div>
 
@@ -1106,6 +1214,8 @@ export default function App() {
           onSave={saveToFavourites}
           isSaved={favourites.some(f => f.id === viewRecipe.id || f.id === viewRecipe.recipe_id)}
           onAddToList={addToShoppingList}
+          onAddToMealPlan={addRecipeToMealPlan}
+          user={user}
           onFetchInstructions={async () => {
             const id = viewRecipe.recipe_id;
             if (recipeInstructions[id]?.loading || recipeInstructions[id]?.steps) return;
