@@ -1,4 +1,4 @@
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -10,6 +10,7 @@ vi.mock('./lib/api', () => ({
 
 import App from './App';
 import { api } from './lib/api';
+import MealPlanPage from './components/MealPlanPage';
 
 const mockRecipe = {
   recipe_id: '1',
@@ -481,4 +482,57 @@ describe('Session timeout', () => {
       vi.useRealTimers();
     }
   }, 15000);
+});
+
+describe('MealPlanPage', () => {
+  it('shows empty state when plan is null', () => {
+    render(
+      <MealPlanPage
+        plan={null}
+        loading={false}
+        onBack={vi.fn()}
+        onRemoveItem={vi.fn()}
+        onGeneratePlan={vi.fn()}
+        onAddToShoppingList={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/No meal plan yet/i)).toBeInTheDocument();
+    cleanup();
+  });
+
+  it('renders recipe name when plan has items', () => {
+    const plan = {
+      plan_id: 'p1',
+      number_of_days: 2,
+      days: [
+        {
+          day_number: 1,
+          items: [
+            {
+              item_id: 'i1',
+              recipe_id: 'r1',
+              name: 'Lemon Garlic Chicken',
+              cooking_time: 35,
+              nutrition: { calories: 420, protein_g: 30, carbs_g: 15, fats_g: 18 },
+              perishable_warnings: ['chicken'],
+            },
+          ],
+          nutrition_summary: { calories: 420, protein_g: 30, carbs_g: 15, fats_g: 18 },
+        },
+        { day_number: 2, items: [], nutrition_summary: { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 } },
+      ],
+    };
+    render(
+      <MealPlanPage
+        plan={plan}
+        loading={false}
+        onBack={vi.fn()}
+        onRemoveItem={vi.fn()}
+        onGeneratePlan={vi.fn()}
+        onAddToShoppingList={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Lemon Garlic Chicken')).toBeInTheDocument();
+    cleanup();
+  });
 });
