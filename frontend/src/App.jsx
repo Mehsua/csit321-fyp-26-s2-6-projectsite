@@ -56,6 +56,8 @@ const S = {
   recipeBtns: { display: "flex", gap: 6, flexWrap: "wrap" },
   recipeBtn: { fontSize: 12, padding: "4px 10px", border: "1px solid #e5e5e5", borderRadius: 6, background: "#fff", cursor: "pointer", color: "#333" },
   recipeBtnPrimary: { fontSize: 12, padding: "4px 10px", border: "none", borderRadius: 6, background: "#16a34a", color: "#fff", cursor: "pointer" },
+  scoreBar: { height: 4, borderRadius: 2, background: '#e5e5e5', margin: '6px 0', overflow: 'hidden' },
+  scoreFill: (pct) => ({ height: '100%', borderRadius: 2, background: pct >= 70 ? '#16a34a' : pct >= 40 ? '#d97706' : '#dc2626', width: `${pct}%`, transition: 'width 0.3s ease' }),
   chips: { display: "flex", flexWrap: "wrap", gap: 6, padding: "8px 40px 0" },
   chip: { fontSize: 12, padding: "5px 12px", border: "1px solid #e5e5e5", borderRadius: 12, background: "#fff", cursor: "pointer", color: "#555" },
   inputArea: { padding: "12px 40px 20px", borderTop: "1px solid #e5e5e5", flexShrink: 0 },
@@ -131,17 +133,29 @@ function RecipeCardMsg({ recipe, onView, onSave, saved }) {
   const pct = Math.round(recipe.score * 100);
   return (
     <div style={S.recipeCard}>
-      <div style={S.recipeTitle}>{recipe.name}</div>
-      <div style={S.recipeMeta}>
-        <span style={S.badge(pct === 100 ? "match" : pct >= 60 ? "warn" : "red")}>{pct}% match</span>
-        <span>{recipe.prepTime + recipe.cookTime} mins</span>
-        <span>{recipe.calories} kcal</span>
-        {recipe.dietary.slice(0, 2).map(d => <span key={d} style={S.badge("match")}>{d}</span>)}
-        {recipe.missing.length > 0 && <span style={S.badge("warn")}>Missing: {recipe.missing.slice(0, 2).join(", ")}</span>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+        <div style={S.recipeTitle}>{recipe.name}</div>
+        <span style={S.badge(pct === 100 ? "match" : pct >= 60 ? "warn" : "red")}>{pct}%</span>
       </div>
+      <div style={S.scoreBar}>
+        <div style={S.scoreFill(pct)} />
+      </div>
+      <div style={S.recipeMeta}>
+        <span>{recipe.cookTime} mins</span>
+        {recipe.dietary.slice(0, 2).map(d => <span key={d} style={S.badge("match")}>{d}</span>)}
+        {recipe.allergen_warning && <span style={S.badge("red")}>⚠ Allergen</span>}
+      </div>
+      {recipe.missing.length > 0 && (
+        <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+          Missing: {recipe.missing.slice(0, 3).map(m => (
+            <span key={m} style={{ fontSize: 11, padding: '2px 7px', borderRadius: 10, border: '1px solid #e5e5e5', color: '#555', marginRight: 4 }}>{m}</span>
+          ))}
+        </div>
+      )}
       <div style={S.recipeBtns}>
         <button style={S.recipeBtnPrimary} onClick={() => onView(recipe)}>View instructions</button>
         <button style={S.recipeBtn} onClick={() => onSave(recipe)}>{saved ? "✓ Saved" : "♡ Save"}</button>
+        <button style={{ ...S.recipeBtn, color: '#999', borderColor: '#ddd', cursor: 'not-allowed' }} title="Shopping list — coming soon">🛒</button>
       </div>
     </div>
   );
