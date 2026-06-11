@@ -1,98 +1,25 @@
 import { useState, useRef, useEffect } from "react";
 import { api, setToken, getToken } from "./lib/api";
 
-// ─── Seed Data ────────────────────────────────────────────────────────────────
-const RECIPES = [
-  {
-    id: 1, name: "Lemon Garlic Chicken", cuisine: "Western", prepTime: 10, cookTime: 25,
-    ingredients: ["chicken", "garlic", "lemon", "olive oil", "salt", "pepper"],
-    instructions: "1. Season chicken with salt and pepper.\n2. Heat olive oil in a pan over medium-high heat.\n3. Sear chicken 5-6 mins each side until golden.\n4. Add minced garlic and cook 1 min.\n5. Squeeze lemon juice over chicken.\n6. Rest 5 mins before serving.",
-    allergens: [], dietary: ["halal", "gluten-free"], calories: 320
-  },
-  {
-    id: 2, name: "Garlic Butter Chicken Thighs", cuisine: "Western", prepTime: 5, cookTime: 35,
-    ingredients: ["chicken", "garlic", "butter", "thyme", "salt", "pepper"],
-    instructions: "1. Pat chicken dry, season generously.\n2. Melt butter in oven-safe skillet.\n3. Sear thighs skin-side down 8 mins.\n4. Flip, add garlic and thyme.\n5. Bake at 200°C for 20 mins.\n6. Baste with pan juices before serving.",
-    allergens: ["dairy"], dietary: ["halal"], calories: 410
-  },
-  {
-    id: 3, name: "Beef Fried Rice", cuisine: "Asian", prepTime: 15, cookTime: 15,
-    ingredients: ["rice", "beef", "egg", "soy sauce", "garlic", "onion", "oil"],
-    instructions: "1. Cook rice a day ahead and refrigerate.\n2. Slice beef thinly, marinate in soy sauce.\n3. Stir-fry beef in hot wok, set aside.\n4. Scramble eggs, set aside.\n5. Fry garlic and onion until fragrant.\n6. Add rice, stir-fry on high heat.\n7. Return beef and eggs, mix well.",
-    allergens: ["soy", "egg"], dietary: ["halal"], calories: 520
-  },
-  {
-    id: 4, name: "Tomato Pasta", cuisine: "Italian", prepTime: 5, cookTime: 20,
-    ingredients: ["pasta", "tomato", "garlic", "olive oil", "basil", "salt"],
-    instructions: "1. Boil salted water, cook pasta al dente.\n2. Sauté garlic in olive oil 1 min.\n3. Add crushed tomatoes, simmer 10 mins.\n4. Season with salt and fresh basil.\n5. Toss pasta in sauce.\n6. Serve with optional parmesan.",
-    allergens: ["gluten"], dietary: ["vegetarian"], calories: 380
-  },
-  {
-    id: 5, name: "Scrambled Eggs on Toast", cuisine: "Western", prepTime: 2, cookTime: 8,
-    ingredients: ["egg", "butter", "bread", "salt", "pepper"],
-    instructions: "1. Whisk eggs with salt and pepper.\n2. Melt butter in non-stick pan on low heat.\n3. Add eggs, stir gently and continuously.\n4. Remove from heat while still slightly wet.\n5. Toast bread.\n6. Serve eggs on toast immediately.",
-    allergens: ["egg", "dairy", "gluten"], dietary: ["vegetarian"], calories: 290
-  },
-  {
-    id: 6, name: "Chicken Fried Rice", cuisine: "Asian", prepTime: 10, cookTime: 15,
-    ingredients: ["rice", "chicken", "egg", "soy sauce", "garlic", "spring onion", "oil"],
-    instructions: "1. Use day-old cold rice for best results.\n2. Dice chicken, stir-fry until cooked.\n3. Push aside, scramble egg in same wok.\n4. Add garlic and rice, fry on high heat.\n5. Season with soy sauce.\n6. Garnish with chopped spring onion.",
-    allergens: ["soy", "egg"], dietary: ["halal"], calories: 480
-  },
-  {
-    id: 7, name: "Vegetable Stir Fry", cuisine: "Asian", prepTime: 10, cookTime: 10,
-    ingredients: ["broccoli", "carrot", "capsicum", "garlic", "soy sauce", "oil", "onion"],
-    instructions: "1. Cut all vegetables into bite-size pieces.\n2. Heat wok on high until smoking.\n3. Add oil and fry garlic 30 seconds.\n4. Add harder veg first (carrot, broccoli).\n5. Add remaining veg, toss constantly.\n6. Season with soy sauce, serve immediately.",
-    allergens: ["soy"], dietary: ["vegan", "vegetarian", "gluten-free", "halal"], calories: 180
-  },
-  {
-    id: 8, name: "Honey Soy Salmon", cuisine: "Asian", prepTime: 10, cookTime: 15,
-    ingredients: ["salmon", "soy sauce", "honey", "garlic", "ginger", "oil"],
-    instructions: "1. Mix soy sauce, honey, garlic, ginger as marinade.\n2. Marinate salmon 15+ mins.\n3. Heat oil in pan over medium-high.\n4. Cook salmon 4 mins skin side down.\n5. Flip, pour marinade over, cook 3 more mins.\n6. Baste with glaze before serving.",
-    allergens: ["fish", "soy"], dietary: ["gluten-free"], calories: 350
-  },
-  {
-    id: 9, name: "Mushroom Omelette", cuisine: "Western", prepTime: 5, cookTime: 8,
-    ingredients: ["egg", "mushroom", "butter", "cheese", "salt", "pepper"],
-    instructions: "1. Slice mushrooms, sauté in butter until golden.\n2. Whisk 3 eggs with salt and pepper.\n3. Pour eggs into same pan on medium.\n4. When edges set, add mushrooms and cheese.\n5. Fold omelette in half.\n6. Slide onto plate and serve.",
-    allergens: ["egg", "dairy"], dietary: ["vegetarian", "gluten-free"], calories: 310
-  },
-  {
-    id: 10, name: "Minestrone Soup", cuisine: "Italian", prepTime: 15, cookTime: 30,
-    ingredients: ["tomato", "carrot", "onion", "celery", "pasta", "garlic", "olive oil", "salt"],
-    instructions: "1. Sauté onion, carrot, celery in olive oil 5 mins.\n2. Add garlic, cook 1 min.\n3. Add crushed tomatoes and 1L water.\n4. Simmer 15 mins.\n5. Add pasta, cook until tender.\n6. Season, serve with crusty bread.",
-    allergens: ["gluten"], dietary: ["vegan", "vegetarian"], calories: 220
-  }
-];
-
-
-// ─── Recipe Matching ──────────────────────────────────────────────────────────
-function matchRecipes(inputText, userPrefs = {}) {
-  const words = inputText.toLowerCase().split(/[\s,]+/).filter(w => w.length > 2);
-  return RECIPES
-    .map(recipe => {
-      const matched = recipe.ingredients.filter(ing =>
-        words.some(w => ing.includes(w) || w.includes(ing.replace(/s$/, "")))
-      );
-      const score = matched.length / recipe.ingredients.length;
-      const missing = recipe.ingredients.filter(ing =>
-        !words.some(w => ing.includes(w) || w.includes(ing.replace(/s$/, "")))
-      ).filter(ing => !["salt", "pepper", "oil", "olive oil"].includes(ing));
-
-      // Filter by user prefs
-      if (userPrefs.halal && !recipe.dietary.includes("halal")) return null;
-      if (userPrefs.vegetarian && !recipe.dietary.includes("vegetarian")) return null;
-      if (userPrefs.vegan && !recipe.dietary.includes("vegan")) return null;
-      if (userPrefs.glutenFree && !recipe.dietary.includes("gluten-free")) return null;
-      if (userPrefs.allergens?.length) {
-        if (recipe.allergens.some(a => userPrefs.allergens.includes(a))) return null;
-      }
-
-      return { ...recipe, score, matched, missing };
-    })
-    .filter(r => r && r.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
+// ─── Recipe Adapter ────────────────────────────────────────────────────────────
+function adaptRecipe(r) {
+  return {
+    id: r.recipe_id,
+    recipe_id: r.recipe_id,
+    name: r.name,
+    cuisine: r.category,
+    cookTime: r.cooking_time,
+    prepTime: 0,
+    calories: r.nutrition?.calories ?? null,
+    ingredients: [...(r.matching_ingredients || []), ...(r.missing_ingredients || [])],
+    instructions: r.instructions || '',
+    dietary: r.dietary_tags || [],
+    allergens: r.allergens || [],
+    score: r.score,
+    matched: r.matching_ingredients || [],
+    missing: r.missing_ingredients || [],
+    allergen_warning: r.allergen_warning
+  };
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -233,7 +160,7 @@ export default function App() {
   const [authError, setAuthError] = useState("");
   const [sessionId, setSessionId] = useState(null);
   const [prefs, setPrefs] = useState({ halal: false, vegetarian: false, vegan: false, glutenFree: false, allergens: [] });
-  const [adminRecipes, setAdminRecipes] = useState(RECIPES);
+  const [adminRecipes, setAdminRecipes] = useState([]);
   const [editRecipe, setEditRecipe] = useState(null);
   const [adminTab, setAdminTab] = useState("recipes");
   const messagesEndRef = useRef(null);
@@ -304,7 +231,28 @@ export default function App() {
     // Check if ingredient-type query
     const ingredientKeywords = ["have", "got", "using", "use", "with", "make", "cook", "ingredients", "fridge"];
     const isIngredientQuery = ingredientKeywords.some(k => msg.toLowerCase().includes(k)) || msg.includes(",");
-    const matches = isIngredientQuery ? matchRecipes(msg, prefs) : [];
+    let matches = [];
+    if (isIngredientQuery) {
+      try {
+        const { ingredients } = await api.post('/api/chat/extract-ingredients', { text: msg });
+        if (ingredients.length > 0) {
+          const dietaryTags = [];
+          if (prefs.halal) dietaryTags.push('Halal');
+          if (prefs.vegetarian) dietaryTags.push('Vegetarian');
+          if (prefs.vegan) dietaryTags.push('Vegan');
+          if (prefs.glutenFree) dietaryTags.push('GlutenFree');
+
+          const { recipes } = await api.post('/api/recipes/recommend', {
+            ingredients,
+            dietary_tags: dietaryTags,
+            allergen_names: prefs.allergens
+          });
+          matches = recipes.map(adaptRecipe);
+        }
+      } catch (err) {
+        console.error('Recipe matching failed:', err);
+      }
+    }
 
     // Build message history for backend (user + assistant turns only)
     const chatMessages = newMsgs
