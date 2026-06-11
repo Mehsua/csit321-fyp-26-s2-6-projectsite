@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { api, setToken, getToken } from "./lib/api";
 import IngredientConfirmMsg from './components/IngredientConfirmMsg';
+import ShoppingListPage from './components/ShoppingListPage';
 
 // ─── Recipe Adapter ────────────────────────────────────────────────────────────
 function adaptRecipe(r) {
@@ -104,7 +105,7 @@ const S = {
 };
 
 // ─── Components ───────────────────────────────────────────────────────────────
-function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSave, isSaved }) {
+function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSave, isSaved, onAddToList }) {
   const pct = Math.round((recipe.score ?? 0) * 100);
   const inst = instructions || {};
 
@@ -195,6 +196,7 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
         {/* Actions */}
         <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
           <button style={{ ...S.recipeBtn, cursor: 'not-allowed', color: '#999', flex: 1 }} title="Coming in Phase 8">📅 Meal Plan</button>
+          <button style={{ ...S.recipeBtn, flex: 1 }} onClick={() => onAddToList && onAddToList(recipe)} title="Add missing ingredients to shopping list">🛒 Add to List</button>
           {onSave && (
             <button style={isSaved ? { ...S.recipeBtnPrimary, flex: 1 } : { ...S.recipeBtn, flex: 1 }} onClick={() => onSave(recipe)}>
               {isSaved ? '✓ Saved' : '♡ Save'}
@@ -207,7 +209,7 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
   );
 }
 
-function RecipeCardMsg({ recipe, onView, onSave, saved }) {
+function RecipeCardMsg({ recipe, onView, onSave, saved, onAddToList }) {
   const pct = Math.round((recipe.score ?? 0) * 100);
   return (
     <div style={S.recipeCard}>
@@ -233,7 +235,7 @@ function RecipeCardMsg({ recipe, onView, onSave, saved }) {
       <div style={S.recipeBtns}>
         <button style={S.recipeBtnPrimary} onClick={() => onView(recipe)}>View instructions</button>
         <button style={S.recipeBtn} onClick={() => onSave(recipe)}>{saved ? "✓ Saved" : "♡ Save"}</button>
-        <button style={{ ...S.recipeBtn, color: '#999', borderColor: '#ddd', cursor: 'not-allowed' }} title="Shopping list — coming soon">🛒</button>
+        <button style={S.recipeBtn} onClick={() => onAddToList && onAddToList(recipe)} title="Add missing ingredients to shopping list">🛒</button>
       </div>
     </div>
   );
@@ -261,6 +263,10 @@ export default function App() {
   const [savePrefsStatus, setSavePrefsStatus] = useState(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const [shoppingListItems, setShoppingListItems] = useState([]);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const lastActivityRef = useRef(Date.now());
+  const resettingRef = useRef(false);
 
   const currentSession = sessions.find(s => s.id === activeSession);
   const messages = currentSession?.messages || [];
@@ -298,6 +304,8 @@ export default function App() {
           saved_at: f.saved_at,
         })));
       }
+      const shoppingData = await api.get('/api/shopping-list').catch(() => null);
+      if (shoppingData?.items) setShoppingListItems(shoppingData.items);
     }
 
     async function initApp() {
@@ -332,6 +340,28 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  useEffect(() => {
+    const THIRTY_MIN = 30 * 60 * 1000;
+    const interval = setInterval(() => {
+      if (Date.now() - lastActivityRef.current > THIRTY_MIN) {
+        if (resettingRef.current) return;
+        resettingRef.current = true;
+        setSessionExpired(true);
+        const newId = Date.now();
+        setTimeout(async () => {
+          setSessions([{ id: newId, title: 'New chat', messages: [] }]);
+          setActiveSession(newId);
+          setSessionExpired(false);
+          lastActivityRef.current = Date.now();
+          resettingRef.current = false;
+          const newSession = await api.post('/api/sessions').catch(() => null);
+          if (newSession) setSessionId(newSession.session_id);
+        }, 3000);
+      }
+    }, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   function updateMessages(newMsgs) {
     setSessions(prev => prev.map(s => s.id === activeSession ? { ...s, messages: newMsgs } : s));
   }
@@ -344,6 +374,7 @@ export default function App() {
 
   async function sendMessage(text = input) {
     const sid = activeSession;
+    lastActivityRef.current = Date.now();
     const msg = text.trim();
     if (!msg || loading) return;
     setInput("");
@@ -539,6 +570,8 @@ export default function App() {
           saved_at: f.saved_at,
         })));
       }
+      const shoppingData = await api.get('/api/shopping-list').catch(() => null);
+      if (shoppingData?.items) setShoppingListItems(shoppingData.items);
     } catch (err) {
       if (err.status === 423) {
         const lockUntil = err.data?.lock_until
@@ -587,6 +620,27 @@ export default function App() {
     const id = Date.now();
     setSessions([{ id, title: 'New chat', messages: [] }]);
     setActiveSession(id);
+  }
+
+  async function addToShoppingList(recipe) {
+    try {
+      const { items } = await api.post('/api/shopping-list/generate', {
+        recipeId: recipe.recipe_id,
+        sessionIngredients: recipe.matched || [],
+      });
+      setShoppingListItems(prev => {
+        const existingKeys = new Set(prev.map(i => i.ingredient_id || i.name));
+        return [...prev, ...items.filter(i => !existingKeys.has(i.ingredient_id || i.name))];
+      });
+      setPage('shopping-list');
+    } catch (_) {}
+  }
+
+  async function clearShoppingList() {
+    setShoppingListItems([]);
+    if (user) {
+      await api.delete('/api/shopping-list').catch(() => null);
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -654,7 +708,7 @@ export default function App() {
                     {msg.recipes?.length > 0 && (
                       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: msg.content ? 8 : 0 }}>
                         {msg.recipes.map(r => (
-                          <RecipeCardMsg key={r.id} recipe={r} onView={setViewRecipe} onSave={saveToFavourites} saved={favourites.some(f => f.id === r.id)} />
+                          <RecipeCardMsg key={r.id} recipe={r} onView={setViewRecipe} onSave={saveToFavourites} saved={favourites.some(f => f.id === r.id)} onAddToList={addToShoppingList} />
                         ))}
                       </div>
                     )}
@@ -962,6 +1016,13 @@ export default function App() {
         </div>
         <div style={S.topRight}>
           <button style={S.btn} title="Help / FAQ" onClick={() => setHelpOpen(true)}>❓</button>
+          <button
+            style={{ ...S.btn, color: page === 'shopping-list' ? '#16a34a' : '#555' }}
+            title="Shopping List"
+            onClick={() => setPage('shopping-list')}
+          >
+            🛒
+          </button>
           <button style={S.btn} title="Reset Chat" onClick={resetChat}>↺</button>
           {user ? (
             <>
@@ -979,6 +1040,12 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {sessionExpired && (
+        <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: '#dc2626', color: '#fff', padding: '10px 20px', borderRadius: 8, zIndex: 200, fontSize: 13, fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+          ⏱ Session expired — starting a new conversation…
+        </div>
+      )}
 
       {/* Body */}
       <div style={S.body}>
@@ -1019,6 +1086,14 @@ export default function App() {
           {page === "profile" && user && renderProfile()}
           {page === "favourites" && user && renderFavourites()}
           {page === "admin" && user?.isAdmin && renderAdmin()}
+          {page === 'shopping-list' && (
+            <ShoppingListPage
+              onBack={() => setPage('chat')}
+              user={user}
+              items={shoppingListItems}
+              onClear={clearShoppingList}
+            />
+          )}
         </div>
       </div>
 
@@ -1030,6 +1105,7 @@ export default function App() {
           instructions={recipeInstructions[viewRecipe.recipe_id]}
           onSave={saveToFavourites}
           isSaved={favourites.some(f => f.id === viewRecipe.id || f.id === viewRecipe.recipe_id)}
+          onAddToList={addToShoppingList}
           onFetchInstructions={async () => {
             const id = viewRecipe.recipe_id;
             if (recipeInstructions[id]?.loading || recipeInstructions[id]?.steps) return;
