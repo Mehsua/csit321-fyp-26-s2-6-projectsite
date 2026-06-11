@@ -120,9 +120,27 @@
 
 ---
 
-## Phase 5 — Frontend–Backend Integration
+## Phase 5 — Frontend Redesign
 
-> Test cases to be written when Phase 5 is planned.
+| ID | Feature | Spec Reference | Test Scenario | Test Steps | Expected Result | Actual Result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|---|---|
+| P5-01 | Ingredient confirmation flow | SD-03 step 2-4, wireframe 01_guest_chat | Typing ingredient query shows confirmation before recipes | Type "I have chicken and garlic" → Enter | "Got it! I identified..." bubble appears. "Yes, find recipes" + "Edit list" buttons visible. /api/recipes/recommend NOT called yet. | Vitest: "shows confirmation message after ingredient query" PASS | PASS | Automated |
+| P5-02 | Ingredient confirmation — confirm | SD-03 step 5, wireframe 01_guest_chat | Clicking "Yes, find recipes" runs recommendation | Click "✓ Yes, find recipes" | Recipe cards appear. "I found N recipe(s)..." message shown. | Vitest: "runs recommendation and shows recipes when user confirms" PASS | PASS | Automated |
+| P5-03 | Ingredient confirmation — edit | wireframe 01_guest_chat | Clicking "Edit list" shows editable input | Click "✏ Edit list" | Edit input pre-filled with "chicken, garlic". "Find recipes" button shown. | Vitest: "shows edit input when user clicks Edit list" PASS | PASS | Automated |
+| P5-04 | Ingredient confirmation — edited submit | wireframe 01_guest_chat | Submit edited ingredient list uses new list | Edit to "chicken, garlic, onion" → click Find recipes | POST /api/recipes/recommend called with ingredients: ["chicken","garlic","onion"] | Vitest: "runs recommendation with edited ingredients on submit" PASS | PASS | Automated |
+| P5-05 | Ingredient fallthrough | SD-03 | Non-ingredient query bypasses confirmation | Type non-ingredient message, extraction returns [] | No confirmation bubble. /api/chat called directly. | Vitest: "falls through to general chat if no ingredients extracted" PASS | PASS | Automated |
+| P5-06 | Guest mode banner | wireframe 01_guest_chat | Yellow banner shown for unauthenticated users | Load app without logging in | Yellow banner: "ℹ Guest Mode — Sign up to save favourites & preferences" with Sign Up + Login links | Vitest: "shows guest mode banner when not logged in" PASS | PASS | Automated |
+| P5-07 | Registered status bar | wireframe 04_registered_chat | Green status bar shown for logged-in users | Log in as registered user | Green bar shows "✓ {name} | Registered" and dietary prefs summary | Vitest: "does not show guest banner when logged in" PASS | PASS | Automated |
+| P5-08 | Help modal | wireframe topbar | ❓ button opens Help/FAQ modal | Click ❓ button in topbar | Help modal opens with 4-step usage guide. Closes on ✕ or overlay click. | Manual test | PASS | Manual |
+| P5-09 | Reset chat | wireframe topbar | ↺ button clears current session | Click ↺ button | All messages cleared, fresh "New chat" started | Manual test | PASS | Manual |
+| P5-10 | Score progress bar | wireframe 04_registered_chat | Recipe cards show coloured progress bar | Send ingredient query → confirm → view recipe cards | Each card has a horizontal progress bar matching the % badge colour (green/orange/red) | Manual test | PASS | Manual |
+| P5-11 | Recipe modal — ingredient checklist | wireframe 05_recipe_detail | Modal shows matched/missing ingredients | Click "View instructions" on a recipe card | Matched ingredients have ✓ (green), missing have ○ (red) + "missing" tag | Manual test | PASS | Manual |
+| P5-12 | Recipe modal — instruction fetch | wireframe 05_recipe_detail | "Load cooking instructions" button fetches real steps | Click "Load cooking instructions" | Loading… spinner shows, then steps appear. GET /api/recipes/:id/instructions called. | Manual test | PASS | Manual |
+| P5-13 | Recipe modal — AI disclaimer | wireframe 05_recipe_detail | AI disclaimer shown for generated instructions | View instructions for recipe using OpenAI fallback | "⚠ AI-generated instructions — may vary from traditional recipe" banner appears | Manual test | PASS | Manual |
+| P5-14 | Continue as Guest | wireframe 02_login | Login page has Continue as Guest link | Click "Sign in" button → view login page | "Continue as Guest" link visible below register/login toggle | Vitest: "shows Continue as Guest link on login page" PASS | PASS | Automated |
+| P5-15 | Continue as Guest navigation | wireframe 02_login | Clicking Continue as Guest returns to chat | Click "Continue as Guest" on login page | Returns to chat page with input available | Vitest: "navigates back to chat when Continue as Guest is clicked" PASS | PASS | Automated |
+| P5-16 | Frontend test suite | — | All Vitest tests pass | `cd frontend && npm test` | 10/10 tests pass | 10 passed | PASS | Automated |
+| P5-17 | Frontend build | — | Production build succeeds | `cd frontend && npm run build` | Build completes, no errors, ~227 kB bundle | Build succeeded in <200ms | PASS | Automated |
 
 ---
 
