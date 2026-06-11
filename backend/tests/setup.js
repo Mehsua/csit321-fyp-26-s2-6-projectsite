@@ -4,3 +4,4 @@ process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
 process.env.SESSION_SECRET = 'test-secret-for-jest';
 process.env.PORT = '3002';
 process.env.ALLOWED_ORIGINS = 'http://localhost:5173';
+process.env.OPENAI_API_KEY = 'sk-test-mock-key-for-jest';
