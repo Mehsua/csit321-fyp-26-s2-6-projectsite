@@ -239,6 +239,7 @@ export default function App() {
           const confirmMsg = {
             role: 'assistant',
             type: 'ingredient_confirm',
+            id: Date.now(),
             ingredients,
             confirmed: false,
           };
@@ -253,11 +254,11 @@ export default function App() {
 
     // General chat
     const chatMessages = newMsgs
-      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .filter(m => (m.role === 'user' || m.role === 'assistant') && m.type !== 'ingredient_confirm')
       .map(m => ({ role: m.role, content: m.content || '' }))
       .slice(-20);
 
-    const botMsg = { role: 'assistant', content: '' };
+    const botMsg = { role: 'assistant', id: Date.now(), content: '' };
     updateMessages([...newMsgs, botMsg]);
 
     try {
@@ -289,11 +290,11 @@ export default function App() {
     setFavourites(prev => prev.find(f => f.id === recipe.id) ? prev : [...prev, recipe]);
   }
 
-  async function runRecommend(ingredients, confirmMsgIdx) {
+  async function runRecommend(ingredients, confirmMsgId) {
     // Mark the confirmation message as confirmed (disables its buttons)
     setSessions(prev => prev.map(s =>
       s.id === activeSession
-        ? { ...s, messages: s.messages.map((m, i) => i === confirmMsgIdx ? { ...m, confirmed: true } : m) }
+        ? { ...s, messages: s.messages.map((m) => m.id === confirmMsgId ? { ...m, confirmed: true } : m) }
         : s
     ));
 
@@ -439,7 +440,7 @@ export default function App() {
                   <IngredientConfirmMsg
                     ingredients={msg.ingredients}
                     confirmed={msg.confirmed}
-                    onConfirm={(finalIngredients) => runRecommend(finalIngredients, i)}
+                    onConfirm={(finalIngredients) => runRecommend(finalIngredients, msg.id)}
                   />
                 </div>
               );

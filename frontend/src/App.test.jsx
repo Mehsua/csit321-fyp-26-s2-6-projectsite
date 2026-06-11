@@ -26,7 +26,7 @@ const mockRecipe = {
   instructions: null,
 };
 
-function setupMocks(overrides = {}) {
+function setupMocks() {
   api.post.mockImplementation((url) => {
     if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
     if (url === '/api/chat/extract-ingredients') return Promise.resolve({ ingredients: ['chicken', 'garlic'] });
@@ -34,13 +34,9 @@ function setupMocks(overrides = {}) {
     if (url === '/api/chat') return Promise.resolve({ reply: 'Sure, I can help!' });
     return Promise.resolve({});
   });
-  Object.entries(overrides).forEach(([url, val]) => {
-    api.post.mockImplementation((u) => u === url ? Promise.resolve(val) : api.post.getMockImplementation()(u));
-  });
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   api.get.mockResolvedValue({ user: { name: 'Test', email: 'test@test.com', role: 'user' } });
   setupMocks();
 });

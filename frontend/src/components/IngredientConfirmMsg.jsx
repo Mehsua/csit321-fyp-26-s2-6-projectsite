@@ -56,6 +56,7 @@ const S = {
 export default function IngredientConfirmMsg({ ingredients, onConfirm, confirmed }) {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(ingredients.join(', '));
+  const [submitting, setSubmitting] = useState(false);
 
   if (confirmed) {
     return (
@@ -72,7 +73,7 @@ export default function IngredientConfirmMsg({ ingredients, onConfirm, confirmed
   if (editing) {
     const handleSubmit = () => {
       const parsed = editText.split(',').map(s => s.trim()).filter(Boolean);
-      if (parsed.length > 0) onConfirm(parsed);
+      if (parsed.length > 0) { setSubmitting(true); onConfirm(parsed); }
     };
     return (
       <div style={S.confirmBubble}>
@@ -84,7 +85,13 @@ export default function IngredientConfirmMsg({ ingredients, onConfirm, confirmed
           onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }}
         />
         <div style={{ display: 'flex', gap: 8 }}>
-          <button style={S.btnConfirm} onClick={handleSubmit}>Find recipes</button>
+          <button
+            style={{ ...S.btnConfirm, opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+            disabled={submitting}
+            onClick={handleSubmit}
+          >
+            Find recipes
+          </button>
           <button style={S.btnEdit} onClick={() => setEditing(false)}>Cancel</button>
         </div>
       </div>
@@ -101,7 +108,11 @@ export default function IngredientConfirmMsg({ ingredients, onConfirm, confirmed
         <div style={{ marginTop: 8 }}>Is this correct?</div>
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <button style={S.btnConfirm} onClick={() => onConfirm(ingredients)}>
+        <button
+          style={{ ...S.btnConfirm, opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+          disabled={submitting}
+          onClick={() => { setSubmitting(true); onConfirm(ingredients); }}
+        >
           ✓ Yes, find recipes
         </button>
         <button style={S.btnEdit} onClick={() => setEditing(true)}>
