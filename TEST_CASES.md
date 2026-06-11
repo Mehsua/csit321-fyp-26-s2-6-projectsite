@@ -144,13 +144,48 @@
 
 ---
 
-## Phase 6 — Remaining Features
+## Phase 6 — User Preferences, Favourites & Nutrition Card
 
-> Shopping list, meal plan, dietary filter, allergen warning, favourites, session management, nutrition card.
-> Test cases to be written when Phase 6 is planned.
+| ID | Feature | Spec Reference | Test Scenario | Test Steps | Expected Result | Actual Result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|---|---|
+| P6-01 | GET /api/users/me/preferences — auth guard | Section 4.6 dietary prefs | Request without auth token returns 401 | `GET /api/users/me/preferences` no Authorization header | HTTP 401 | Jest: user.routes.test.js "returns 401 without auth token" PASS | PASS | Automated |
+| P6-02 | GET /api/users/me/preferences — success | Section 4.6 | Registered user gets their dietary and allergen prefs | `GET /api/users/me/preferences` with valid JWT | HTTP 200, `{ dietaryTags: ["Halal"], allergenNames: ["Peanuts"] }` | Jest: "returns 200 with preferences for registered user" PASS | PASS | Automated |
+| P6-03 | PUT /api/users/me/preferences — auth guard | Section 4.6 | Request without auth token returns 401 | `PUT /api/users/me/preferences {}` no header | HTTP 401 | Jest: "returns 401 without auth token" PASS | PASS | Automated |
+| P6-04 | PUT /api/users/me/preferences — bad input | Input validation | dietaryTags as string (not array) returns 400 | `PUT /api/users/me/preferences { dietaryTags: "Halal", allergenNames: [] }` with JWT | HTTP 400 | Jest: "returns 400 when dietaryTags is not an array" PASS | PASS | Automated |
+| P6-05 | PUT /api/users/me/preferences — success | Section 4.6 | Valid arrays saved, returns 200 | `PUT /api/users/me/preferences { dietaryTags: ["Halal"], allergenNames: [] }` with JWT | HTTP 200, `{ message: "Preferences saved" }` | Jest: "returns 200 on successful save" PASS | PASS | Automated |
+| P6-06 | GET /api/users/me/favourites — auth guard | Section 4.7 favourites | No auth returns 401 | `GET /api/users/me/favourites` no header | HTTP 401 | Jest: "returns 401 without auth token" PASS | PASS | Automated |
+| P6-07 | GET /api/users/me/favourites — success | Section 4.7 | Returns paginated favourites list | `GET /api/users/me/favourites` with valid JWT | HTTP 200, `{ count, remaining, favourites: [...] }` | Jest: "returns 200 with favourites list" PASS | PASS | Automated |
+| P6-08 | POST /api/users/me/favourites — auth guard | Section 4.7 | No auth returns 401 | `POST /api/users/me/favourites {}` no header | HTTP 401 | Jest: "returns 401 without auth token" PASS | PASS | Automated |
+| P6-09 | POST /api/users/me/favourites — missing recipeId | Input validation | Missing recipeId body field returns 400 | `POST /api/users/me/favourites {}` with JWT | HTTP 400 | Jest: "returns 400 when recipeId is missing" PASS | PASS | Automated |
+| P6-10 | POST /api/users/me/favourites — success | Section 4.7 | Recipe saved, returns 201 | `POST /api/users/me/favourites { recipeId:"r-01", score:0.92 }` with JWT | HTTP 201, UserService.addFavourite called with correct args | Jest: "returns 201 on successful save" PASS | PASS | Automated |
+| P6-11 | POST /api/users/me/favourites — 409 | RS §5 max 50 / duplicate | Duplicate or limit-exceeded returns 409 | `POST /api/users/me/favourites { recipeId:"r-01" }` (service throws status 409) | HTTP 409 | Jest: "returns 409 when already saved or limit reached" PASS | PASS | Automated |
+| P6-12 | DELETE /api/users/me/favourites/:id — auth guard | Section 4.7 | No auth returns 401 | `DELETE /api/users/me/favourites/r-01` no header | HTTP 401 | Jest: "returns 401 without auth token" PASS | PASS | Automated |
+| P6-13 | DELETE /api/users/me/favourites/:id — success | Section 4.7 | Recipe removed, returns 204 | `DELETE /api/users/me/favourites/r-01` with JWT | HTTP 204, UserService.removeFavourite called with correct userId + recipeId | Jest: "returns 204 on successful removal" PASS | PASS | Automated |
+| P6-14 | UserService.getPreferences — empty | Section 4.6 | User with no saved prefs returns empty arrays | Mock DB returns empty arrays | `{ dietaryTags: [], allergenNames: [] }` | Jest: user.service.test.js "returns empty arrays when user has no prefs" PASS | PASS | Automated |
+| P6-15 | UserService.getPreferences — populated | Section 4.6 | Returns correct names from joined tables | Mock returns Halal + Vegan tags, Peanuts allergen | `{ dietaryTags: ["Halal","Vegan"], allergenNames: ["Peanuts"] }` | Jest: "returns correct tag and allergen names" PASS | PASS | Automated |
+| P6-16 | UserService.setPreferences — insert | Section 4.6 | Resolves names to IDs then deletes + inserts | Mock tag lookup returns tid-1, allergen lookup returns aid-1 | DB called 6 times (2 lookups + 2 deletes + 2 inserts) | Jest: "inserts dietary tag IDs and allergen IDs after lookup" PASS | PASS | Automated |
+| P6-17 | UserService.setPreferences — empty | Section 4.6 | Empty arrays delete existing, skip inserts | dietaryTags:[], allergenNames:[] | DB called 4 times (2 lookups + 2 deletes, no inserts) | Jest: "handles empty dietaryTags and allergenNames" PASS | PASS | Automated |
+| P6-18 | UserService.getFavourites — empty | Section 4.7 | User with no favourites returns zero count | Mock DB returns empty array | `{ count: 0, remaining: 50, favourites: [] }` | Jest: "returns empty favourites for user with none" PASS | PASS | Automated |
+| P6-19 | UserService.getFavourites — mapped | Section 4.7 | Nested recipe data flattened correctly | Mock returns 1 row with nested recipes + nutrition | `count:1, remaining:49, favourites[0].name:"Chicken Rendang", score:0.92, dietary_tags:["Halal"]` | Jest: "returns mapped favourites with recipe data" PASS | PASS | Automated |
+| P6-20 | UserService.addFavourite — success | Section 4.7 | Under limit inserts correctly | count=5, mock insert succeeds | Resolves, insert called with user_id + recipe_id + score | Jest: "inserts favourite when under limit" PASS | PASS | Automated |
+| P6-21 | UserService.addFavourite — limit 409 | RS §5 max 50 | count=50 throws status 409 | count=50 from DB | Error thrown with `{ status: 409 }` | Jest: "throws 409 when limit of 50 reached" PASS | PASS | Automated |
+| P6-22 | UserService.addFavourite — duplicate 409 | RS §5 unique | PG unique constraint (23505) throws status 409 | insert returns error code 23505 | Error thrown with `{ status: 409 }` | Jest: "throws 409 on duplicate (unique constraint error code 23505)" PASS | PASS | Automated |
+| P6-23 | UserService.removeFavourite | Section 4.7 | Deletes row matching userId + recipeId | Mock delete chain resolves | Resolves, `from("user_favourites")` called | Jest: "deletes the correct row" PASS | PASS | Automated |
+| P6-24 | Nutrition card — recipe cards | Section 4.9 nutrition | Calories shown on recipe cards | Render app with mocked recommend returning nutrition_info | Calories value visible on recipe card | Vitest: App.test.jsx "shows nutrition info on recipe cards" PASS | PASS | Automated |
+| P6-25 | Prefs loaded on app init | Section 4.6 | Dietary/allergen prefs fetched when user is logged in at startup | Mock logged-in user, check api.get calls | `GET /api/users/me/preferences` + `GET /api/users/me/favourites` called on mount | Vitest: "loads user preferences and favourites on init when user is logged in" PASS | PASS | Automated |
+| P6-26 | Save to favourites — API call | Section 4.7 | ♡ Save in modal calls POST API | Logged-in user, click Save in RecipeModal | `POST /api/users/me/favourites` called with correct recipeId | Vitest: "calls POST favourites API when save button is clicked" PASS | PASS | Automated |
+| P6-27 | Save preferences button — visible | Section 4.6 wireframe 03_profile | Save Preferences button shown on profile page | Navigate to profile page as logged-in user | Button with "Save Preferences" label visible | Vitest: "shows save preferences button on profile page" PASS | PASS | Automated |
+| P6-28 | Save preferences button — API call | Section 4.6 | Clicking Save Preferences calls PUT API | Click Save Preferences button | `PUT /api/users/me/preferences` called | Vitest: "calls PUT preferences API on save" PASS | PASS | Automated |
+| P6-29 | Favourites page — navigation | Section 4.7 wireframe 06_favourites | ♡ topbar button navigates to favourites page | Logged-in user, click ♡ button in topbar | Favourites page heading visible | Vitest: "shows favourites page when nav button clicked" PASS | PASS | Automated |
+| P6-30 | Favourites page — recipe list | Section 4.7 | Saved recipes rendered with score + date | Mock getFavourites returns 1 recipe | Recipe name and score badge visible on favourites page | Vitest: "renders saved recipes on favourites page" PASS | PASS | Automated |
+| P6-31 | RecipeModal save button | Section 4.7 | ♡ Save button present in recipe modal | Open recipe modal as logged-in user | Save button visible in modal actions | Vitest: "shows save button in recipe modal for logged-in user" PASS | PASS | Automated |
+| P6-32 | DB migration — score column | Section 4.7 | user_favourites.score column exists and is nullable | Run `20260611000004_favourites_score.sql` in Supabase SQL Editor → `SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name='user_favourites';` | `score` column present, type `numeric`, nullable=YES | PENDING — migration SQL not yet run | PENDING | Manual — run in Supabase SQL Editor |
+| P6-33 | Nutrition seed — 10 rows | Section 4.9 | All 10 seeded recipes have nutrition_info rows | Run `003_nutrition_seed.sql` → `SELECT COUNT(*) FROM nutrition_info;` | Returns 10 | PENDING — seed SQL not yet run | PENDING | Manual — run in Supabase SQL Editor |
+| P6-34 | Full flow — save and view favourites | Section 4.7 | Login → find recipe → save → navigate to ♡ Favourites → recipe appears | Browser: login → send ingredient query → confirm → click ♡ Save in modal → click ♡ topbar button | Recipe appears in Favourites page with score badge and date | PENDING — manual browser test | PENDING | Manual |
+| P6-35 | Dietary prefs persist across login | Section 4.6 | Saved prefs reload after logout and re-login | Set Halal preference → logout → login again | Status bar shows "Halal" on login | PENDING — manual browser test | PENDING | Manual |
 
 ---
 
-## Phase 7 — Admin Panel
+## Phase 7 — Shopping List + Session Management
 
 > Test cases to be written when Phase 7 is planned.
