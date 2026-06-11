@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { api, setToken, getToken } from "./lib/api";
+import IngredientConfirmMsg from './components/IngredientConfirmMsg';
 
 // ─── Recipe Adapter ────────────────────────────────────────────────────────────
 function adaptRecipe(r) {
@@ -221,78 +222,55 @@ export default function App() {
     const newMsgs = [...messages, userMsg];
     updateMessages(newMsgs);
 
-    // Update session title from first message
     if (messages.length === 0) {
       setSessions(prev => prev.map(s => s.id === activeSession ? { ...s, title: msg.slice(0, 40) } : s));
     }
 
     setLoading(true);
 
-    // Check if ingredient-type query
+    // Ingredient extraction + confirmation flow
     const ingredientKeywords = ["have", "got", "using", "use", "with", "make", "cook", "ingredients", "fridge"];
     const isIngredientQuery = ingredientKeywords.some(k => msg.toLowerCase().includes(k)) || msg.includes(",");
-    let matches = [];
+
     if (isIngredientQuery) {
       try {
         const { ingredients } = await api.post('/api/chat/extract-ingredients', { text: msg });
         if (ingredients.length > 0) {
-          const dietaryTags = [];
-          if (prefs.halal) dietaryTags.push('Halal');
-          if (prefs.vegetarian) dietaryTags.push('Vegetarian');
-          if (prefs.vegan) dietaryTags.push('Vegan');
-          if (prefs.glutenFree) dietaryTags.push('GlutenFree');
-
-          const { recipes } = await api.post('/api/recipes/recommend', {
+          const confirmMsg = {
+            role: 'assistant',
+            type: 'ingredient_confirm',
             ingredients,
-            dietary_tags: dietaryTags,
-            allergen_names: prefs.allergens
-          });
-          matches = recipes.map(adaptRecipe);
+            confirmed: false,
+          };
+          updateMessages([...newMsgs, confirmMsg]);
+          setLoading(false);
+          return;
         }
-      } catch (err) {
-        console.error('Recipe matching failed:', err);
+      } catch {
+        // Fall through to general chat on extraction error
       }
     }
 
-    // Build message history for backend (user + assistant turns only)
+    // General chat
     const chatMessages = newMsgs
       .filter(m => m.role === 'user' || m.role === 'assistant')
-      .map(m => ({ role: m.role, content: m.content }));
+      .map(m => ({ role: m.role, content: m.content || '' }))
+      .slice(-20);
 
-    // Keep only the last 20 messages to avoid exceeding backend limit
-    const windowedMessages = chatMessages.slice(-20);
-
-    // Add context about recipe matches to the last user message
-    const lastUserIdx = windowedMessages.length - 1;
-    if (matches.length > 0 && lastUserIdx >= 0) {
-      const context = `\n\n[Context: ${matches.length} recipe(s) found — top match: "${matches[0].name}" at ${Math.round(matches[0].score * 100)}% match]`;
-      const augmented = windowedMessages[lastUserIdx].content + context;
-      if (augmented.length <= 2000) {
-        windowedMessages[windowedMessages.length - 1] = { ...windowedMessages[windowedMessages.length - 1], content: augmented };
-      }
-    }
-
-    // Place bot message placeholder
-    const botMsg = { role: 'assistant', content: '', recipes: matches };
-    const withBot = [...newMsgs, botMsg];
-    updateMessages(withBot);
+    const botMsg = { role: 'assistant', content: '' };
+    updateMessages([...newMsgs, botMsg]);
 
     try {
-      const { reply } = await api.post('/api/chat', { messages: windowedMessages });
+      const { reply } = await api.post('/api/chat', { messages: chatMessages });
       setSessions(prev => prev.map(s =>
         s.id === activeSession
           ? { ...s, messages: s.messages.map((m, i) => i === s.messages.length - 1 ? { ...m, content: reply } : m) }
           : s
       ));
     } catch (err) {
-      let fallback;
-      if (err.status >= 400 && err.status < 500) {
-        fallback = 'Sorry, there was a problem with your message. Please try again with shorter text.';
-      } else if (matches.length > 0) {
-        fallback = `I found ${matches.length} recipe${matches.length > 1 ? 's' : ''} matching your ingredients! Try "${matches[0].name}".`;
-      } else {
-        fallback = 'I can help with that! Try entering some ingredients you have on hand.';
-      }
+      const fallback = (err.status >= 400 && err.status < 500)
+        ? 'Sorry, there was a problem with your message. Please try again.'
+        : 'I can help with cooking! Try entering some ingredients you have on hand.';
       setSessions(prev => prev.map(s =>
         s.id === activeSession
           ? { ...s, messages: s.messages.map((m, i) => i === s.messages.length - 1 ? { ...m, content: fallback } : m) }
@@ -309,6 +287,50 @@ export default function App() {
 
   function saveToFavourites(recipe) {
     setFavourites(prev => prev.find(f => f.id === recipe.id) ? prev : [...prev, recipe]);
+  }
+
+  async function runRecommend(ingredients, confirmMsgIdx) {
+    // Mark the confirmation message as confirmed (disables its buttons)
+    setSessions(prev => prev.map(s =>
+      s.id === activeSession
+        ? { ...s, messages: s.messages.map((m, i) => i === confirmMsgIdx ? { ...m, confirmed: true } : m) }
+        : s
+    ));
+
+    setLoading(true);
+
+    const dietaryTags = [];
+    if (prefs.halal) dietaryTags.push('Halal');
+    if (prefs.vegetarian) dietaryTags.push('Vegetarian');
+    if (prefs.vegan) dietaryTags.push('Vegan');
+    if (prefs.glutenFree) dietaryTags.push('GlutenFree');
+
+    try {
+      const { recipes } = await api.post('/api/recipes/recommend', {
+        ingredients,
+        dietary_tags: dietaryTags,
+        allergen_names: prefs.allergens,
+      });
+      const adapted = (recipes || []).map(adaptRecipe);
+      const count = adapted.length;
+      const content = count > 0
+        ? `I found ${count} recipe${count !== 1 ? 's' : ''} matching your ingredients. Here are the top results:`
+        : "I couldn't find matching recipes. Try adjusting your ingredients or dietary filters.";
+
+      setSessions(prev => prev.map(s =>
+        s.id === activeSession
+          ? { ...s, messages: [...s.messages, { role: 'assistant', content, recipes: adapted }] }
+          : s
+      ));
+    } catch {
+      setSessions(prev => prev.map(s =>
+        s.id === activeSession
+          ? { ...s, messages: [...s.messages, { role: 'assistant', content: 'Something went wrong searching for recipes. Please try again.' }] }
+          : s
+      ));
+    }
+
+    setLoading(false);
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -390,6 +412,12 @@ export default function App() {
   function renderChat() {
     return (
       <>
+        {!user && (
+          <div style={{ background: '#fefce8', borderBottom: '1px solid #fde68a', padding: '6px 20px', fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>Guest Mode</span>
+            <span style={{ color: '#78350f' }}>— Sign in to save favourites and access all features.</span>
+          </div>
+        )}
         <div style={S.messages}>
           {messages.length === 0 && (
             <div style={{ textAlign: "center", padding: "60px 40px" }}>
@@ -404,25 +432,38 @@ export default function App() {
             </div>
           )}
 
-          {messages.map((msg, i) => (
-            <div key={i}>
-              <div style={S.msgWrap(msg.role === "user")}>
-                <div style={S.avatar(msg.role === "user" ? "#2563eb" : "#16a34a")}>
-                  {msg.role === "user" ? (user?.name?.[0]?.toUpperCase() || "U") : "FB"}
+          {messages.map((msg, i) => {
+            if (msg.type === 'ingredient_confirm') {
+              return (
+                <div key={i} style={{ padding: '4px 40px' }}>
+                  <IngredientConfirmMsg
+                    ingredients={msg.ingredients}
+                    confirmed={msg.confirmed}
+                    onConfirm={(finalIngredients) => runRecommend(finalIngredients, i)}
+                  />
                 </div>
-                <div style={{ maxWidth: "72%" }}>
-                  {msg.content && <div style={S.bubble(msg.role === "user")}>{msg.content}</div>}
-                  {msg.recipes?.length > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: msg.content ? 8 : 0 }}>
-                      {msg.recipes.map(r => (
-                        <RecipeCardMsg key={r.id} recipe={r} onView={setViewRecipe} onSave={saveToFavourites} saved={favourites.some(f => f.id === r.id)} />
-                      ))}
-                    </div>
-                  )}
+              );
+            }
+            return (
+              <div key={i}>
+                <div style={S.msgWrap(msg.role === "user")}>
+                  <div style={S.avatar(msg.role === "user" ? "#2563eb" : "#16a34a")}>
+                    {msg.role === "user" ? (user?.name?.[0]?.toUpperCase() || "U") : "FB"}
+                  </div>
+                  <div style={{ maxWidth: "72%" }}>
+                    {msg.content && <div style={S.bubble(msg.role === "user")}>{msg.content}</div>}
+                    {msg.recipes?.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: msg.content ? 8 : 0 }}>
+                        {msg.recipes.map(r => (
+                          <RecipeCardMsg key={r.id} recipe={r} onView={setViewRecipe} onSave={saveToFavourites} saved={favourites.some(f => f.id === r.id)} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {loading && messages[messages.length - 1]?.role !== "assistant" && (
             <div style={S.msgWrap(false)}>
@@ -625,6 +666,11 @@ export default function App() {
           <div style={S.formLink} onClick={() => { setPage(isLogin ? "register" : "login"); setAuthError(""); }}>
             {isLogin ? "Don't have an account? Register →" : "Already have an account? Sign in →"}
           </div>
+          {isLogin && (
+            <div style={{ ...S.formLink, color: '#888', marginTop: 8 }} onClick={() => setPage("chat")}>
+              Continue as Guest
+            </div>
+          )}
         </div>
       </div>
     );
