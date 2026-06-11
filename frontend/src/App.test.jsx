@@ -118,6 +118,11 @@ describe('Ingredient confirmation flow', () => {
     expect(api.post).toHaveBeenCalledWith('/api/recipes/recommend', expect.objectContaining({
       ingredients: ['chicken', 'garlic', 'onion'],
     }));
+
+    // After Find recipes is clicked, the confirmed bubble should show the edited ingredient list
+    await waitFor(() => {
+      expect(screen.getByText('onion')).toBeInTheDocument();
+    });
   });
 
   it('falls through to general chat if no ingredients extracted', async () => {

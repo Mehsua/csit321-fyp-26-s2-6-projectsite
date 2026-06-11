@@ -294,6 +294,7 @@ export default function App() {
   }
 
   async function sendMessage(text = input) {
+    const sid = activeSession;
     const msg = text.trim();
     if (!msg || loading) return;
     setInput("");
@@ -303,7 +304,7 @@ export default function App() {
     updateMessages(newMsgs);
 
     if (messages.length === 0) {
-      setSessions(prev => prev.map(s => s.id === activeSession ? { ...s, title: msg.slice(0, 40) } : s));
+      setSessions(prev => prev.map(s => s.id === sid ? { ...s, title: msg.slice(0, 40) } : s));
     }
 
     setLoading(true);
@@ -344,7 +345,7 @@ export default function App() {
     try {
       const { reply } = await api.post('/api/chat', { messages: chatMessages });
       setSessions(prev => prev.map(s =>
-        s.id === activeSession
+        s.id === sid
           ? { ...s, messages: s.messages.map((m, i) => i === s.messages.length - 1 ? { ...m, content: reply } : m) }
           : s
       ));
@@ -353,7 +354,7 @@ export default function App() {
         ? 'Sorry, there was a problem with your message. Please try again.'
         : 'I can help with cooking! Try entering some ingredients you have on hand.';
       setSessions(prev => prev.map(s =>
-        s.id === activeSession
+        s.id === sid
           ? { ...s, messages: s.messages.map((m, i) => i === s.messages.length - 1 ? { ...m, content: fallback } : m) }
           : s
       ));
@@ -371,10 +372,11 @@ export default function App() {
   }
 
   async function runRecommend(ingredients, confirmMsgId) {
-    // Mark the confirmation message as confirmed (disables its buttons)
+    const sid = activeSession;
+    // Mark the confirmation message as confirmed (disables its buttons) and update its ingredients
     setSessions(prev => prev.map(s =>
-      s.id === activeSession
-        ? { ...s, messages: s.messages.map((m) => m.id === confirmMsgId ? { ...m, confirmed: true } : m) }
+      s.id === sid
+        ? { ...s, messages: s.messages.map((m) => m.id === confirmMsgId ? { ...m, confirmed: true, ingredients } : m) }
         : s
     ));
 
@@ -399,13 +401,13 @@ export default function App() {
         : "I couldn't find matching recipes. Try adjusting your ingredients or dietary filters.";
 
       setSessions(prev => prev.map(s =>
-        s.id === activeSession
+        s.id === sid
           ? { ...s, messages: [...s.messages, { role: 'assistant', content, recipes: adapted }] }
           : s
       ));
     } catch {
       setSessions(prev => prev.map(s =>
-        s.id === activeSession
+        s.id === sid
           ? { ...s, messages: [...s.messages, { role: 'assistant', content: 'Something went wrong searching for recipes. Please try again.' }] }
           : s
       ));
