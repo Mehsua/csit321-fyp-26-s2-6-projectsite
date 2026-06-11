@@ -130,7 +130,7 @@ function RecipeModal({ recipe, onClose }) {
 }
 
 function RecipeCardMsg({ recipe, onView, onSave, saved }) {
-  const pct = Math.round(recipe.score * 100);
+  const pct = Math.round((recipe.score ?? 0) * 100);
   return (
     <div style={S.recipeCard}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
