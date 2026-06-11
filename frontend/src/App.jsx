@@ -413,10 +413,21 @@ export default function App() {
   function renderChat() {
     return (
       <>
-        {!user && (
-          <div style={{ background: '#fefce8', borderBottom: '1px solid #fde68a', padding: '6px 20px', fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>Guest Mode</span>
-            <span style={{ color: '#78350f' }}>— Sign in to save favourites and access all features.</span>
+        {!user ? (
+          <div style={{ background: '#fffbe6', borderBottom: '1px solid #e0c060', padding: '6px 20px', fontSize: 12, color: '#806000', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <span>ℹ Guest Mode — Sign up to save favourites &amp; preferences</span>
+            <span style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
+              <span style={{ textDecoration: 'underline', cursor: 'pointer' }} onClick={() => setPage('register')}>Sign Up</span>
+              <span style={{ textDecoration: 'underline', cursor: 'pointer' }} onClick={() => setPage('login')}>Login</span>
+            </span>
+          </div>
+        ) : (
+          <div style={{ background: '#e8f5e9', borderBottom: '1px solid #aad0aa', padding: '5px 20px', fontSize: 12, color: '#2a6a2a', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+            <span>✓ {user.name} &nbsp;|&nbsp; {user.isAdmin ? 'Admin' : 'Registered'}</span>
+            <span>
+              {[prefs.halal && 'Halal', prefs.vegetarian && 'Vegetarian', prefs.vegan && 'Vegan', prefs.glutenFree && 'Gluten-Free'].filter(Boolean).join(' · ') || 'No dietary filters'}
+              {prefs.allergens.length > 0 ? ` · No ${prefs.allergens.slice(0, 2).join('/')}` : ''}
+            </span>
           </div>
         )}
         <div style={S.messages}>
