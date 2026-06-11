@@ -13,6 +13,7 @@ import { api } from './lib/api';
 beforeEach(() => {
   vi.clearAllMocks();
   api.post.mockResolvedValue({ session_id: 'test-session' });
+  api.get.mockResolvedValue({ user: { name: 'Test', email: 'test@test.com', role: 'user' } });
 });
 
 describe('App smoke test', () => {
