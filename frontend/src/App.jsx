@@ -164,6 +164,7 @@ export default function App() {
   const [adminRecipes, setAdminRecipes] = useState([]);
   const [editRecipe, setEditRecipe] = useState(null);
   const [adminTab, setAdminTab] = useState("recipes");
+  const [helpOpen, setHelpOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -400,6 +401,12 @@ export default function App() {
     setUser(null);
     setPage("chat");
     setSessionId(null);
+  }
+
+  function resetChat() {
+    const id = Date.now();
+    setSessions([{ id, title: 'New chat', messages: [] }]);
+    setActiveSession(id);
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -698,17 +705,19 @@ export default function App() {
           FoodBot
         </div>
         <div style={S.topRight}>
+          <button style={S.btn} title="Help / FAQ" onClick={() => setHelpOpen(true)}>❓</button>
+          <button style={S.btn} title="Reset Chat" onClick={resetChat}>↺</button>
           {user ? (
             <>
               {user.isAdmin && <button style={{ ...S.btn, color: page === "admin" ? "#16a34a" : "#555" }} onClick={() => setPage("admin")}>Admin</button>}
-              <button style={{ ...S.btn, color: page === "profile" ? "#16a34a" : "#555" }} onClick={() => setPage("profile")}>Profile</button>
-              <div style={{ ...S.avatar("#2563eb"), width: 30, height: 30, fontSize: 12, cursor: "pointer" }} onClick={() => setPage("profile")}>{user.name[0].toUpperCase()}</div>
+              <button style={{ ...S.btn, color: page === "profile" ? "#16a34a" : "#555" }} onClick={() => setPage("profile")}>👤 Profile</button>
+              <div style={{ ...S.avatar("#2563eb"), width: 30, height: 30, fontSize: 12, cursor: "pointer" }} onClick={() => setPage("profile")}>{user?.name?.[0]?.toUpperCase() || '?'}</div>
               <button style={S.btn} onClick={handleLogout}>Sign out</button>
             </>
           ) : (
             <>
               <button style={S.btn} onClick={() => { setPage("login"); setAuthError(""); }}>Sign in</button>
-              <button style={S.btnPrimary} onClick={() => { setPage("register"); setAuthError(""); }}>Register</button>
+              <button style={S.btnPrimary} onClick={() => { setPage("register"); setAuthError(""); }}>Sign Up</button>
             </>
           )}
         </div>
@@ -779,6 +788,36 @@ export default function App() {
                 setEditRecipe(null);
               }}>Save</button>
               <button style={S.btn} onClick={() => setEditRecipe(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help modal */}
+      {helpOpen && (
+        <div style={S.modalOverlay} onClick={() => setHelpOpen(false)}>
+          <div style={S.modalCard} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={S.modalTitle}>❓ Help / FAQ</div>
+              <button style={{ ...S.btn, padding: '4px 10px' }} onClick={() => setHelpOpen(false)}>✕</button>
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.8, color: '#444' }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>How to use FoodBot</div>
+              <div style={{ marginBottom: 12 }}>
+                <strong>1. Enter your ingredients</strong> — Type what you have on hand (e.g. "I have chicken, garlic and tomatoes").
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <strong>2. Confirm the list</strong> — FoodBot extracts the ingredients and asks you to confirm or edit them.
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <strong>3. Get recipes</strong> — FoodBot scores all recipes and shows the top 5 matches with missing ingredients highlighted.
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <strong>4. View a recipe</strong> — Click "View instructions" to see full cooking steps, nutrition info, and a shopping list for missing items.
+              </div>
+              <div style={{ borderTop: '1px solid #e5e5e5', paddingTop: 12, fontSize: 12, color: '#666' }}>
+                Register a free account to save favourites, set dietary preferences, and manage allergen alerts.
+              </div>
             </div>
           </div>
         </div>
