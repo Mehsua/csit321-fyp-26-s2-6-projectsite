@@ -11,7 +11,7 @@ class OpenAIService {
   async extractIngredients(text) {
     try {
       const response = await this.client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1-nano',
         messages: [
           {
             role: 'system',
@@ -34,7 +34,7 @@ class OpenAIService {
   async generateCookingInstructions(recipeName) {
     const safeName = String(recipeName).replace(/[\r\n]/g, ' ').slice(0, 100);
     const response = await this.client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1-nano',
       messages: [
         {
           role: 'system',
@@ -66,7 +66,7 @@ Guidelines:
     };
 
     const response = await this.client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1-nano',
       messages: [systemMessage, ...messages],
       temperature: 0.7,
       max_tokens: 300
