@@ -94,26 +94,62 @@ const S = {
 };
 
 // ─── Components ───────────────────────────────────────────────────────────────
-function RecipeModal({ recipe, onClose }) {
+function RecipeModal({ recipe, onClose, instructions, onFetchInstructions }) {
+  const pct = Math.round((recipe.score ?? 0) * 100);
+  const inst = instructions || {};
+
   return (
     <div style={S.modalOverlay} onClick={onClose}>
-      <div style={S.modalCard} onClick={e => e.stopPropagation()}>
+      <div style={{ ...S.modalCard, width: 520 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-          <div style={S.modalTitle}>{recipe.name}</div>
+          <div>
+            <div style={S.modalTitle}>{recipe.name}</div>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+              {recipe.cookTime} min &nbsp;|&nbsp;
+              <span style={S.badge(pct >= 70 ? "match" : pct >= 40 ? "warn" : "red")}>{pct}% match</span>
+            </div>
+          </div>
           <button style={{ ...S.btn, padding: "4px 10px" }} onClick={onClose}>✕</button>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-          <span style={S.badge("info")}>{recipe.cuisine}</span>
-          <span style={S.badge("info")}>⏱ {recipe.prepTime + recipe.cookTime} mins</span>
-          <span style={S.badge("info")}>🔥 {recipe.calories} kcal</span>
+
+        {/* Dietary tags */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           {recipe.dietary.map(d => <span key={d} style={S.badge("match")}>{d}</span>)}
+          {recipe.allergen_warning && <span style={S.badge("red")}>⚠ Allergen warning</span>}
         </div>
+
+        {/* Nutrition card */}
+        {recipe.calories && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
+            {[['kcal', recipe.calories], ['protein', recipe.nutrition?.protein ?? '—'], ['carbs', recipe.nutrition?.carbs ?? '—'], ['fats', recipe.nutrition?.fats ?? '—']].map(([label, val]) => (
+              <div key={label} style={{ background: '#f9fafb', border: '1px solid #e5e5e5', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>{val}</div>
+                <div style={{ fontSize: 11, color: '#666' }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Ingredient checklist */}
         <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Ingredients</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
-          {recipe.ingredients.map(i => (
-            <span key={i} style={{ fontSize: 12, padding: "3px 9px", background: "#f4f4f4", borderRadius: 8, color: "#333" }}>{i}</span>
+        <div style={{ fontSize: 13, marginBottom: 16 }}>
+          {recipe.matched.map(i => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
+              <span style={{ color: '#16a34a', fontSize: 16 }}>✓</span>
+              <span>{i}</span>
+              <span style={{ fontSize: 11, color: '#888', marginLeft: 'auto' }}>you have this</span>
+            </div>
+          ))}
+          {recipe.missing.map(i => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
+              <span style={{ color: '#dc2626', fontSize: 16 }}>○</span>
+              <span style={{ color: '#dc2626' }}>{i}</span>
+              <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 8, border: '1px solid #fca5a5', color: '#dc2626', marginLeft: 'auto' }}>missing</span>
+            </div>
           ))}
         </div>
+
+        {/* Allergens */}
         {recipe.allergens.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13 }}>⚠ Allergens</div>
@@ -122,8 +158,35 @@ function RecipeModal({ recipe, onClose }) {
             </div>
           </div>
         )}
-        <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Instructions</div>
-        <div style={{ fontSize: 13, lineHeight: 1.7, color: "#333", whiteSpace: "pre-wrap" }}>{recipe.instructions}</div>
+
+        {/* Cooking instructions */}
+        <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>
+          Cooking Instructions
+          {inst.loading && <span style={{ fontWeight: 400, color: '#999', marginLeft: 8, fontSize: 12 }}>Loading…</span>}
+        </div>
+        {!inst.loading && !inst.steps && (
+          <button style={{ ...S.btn, fontSize: 12, marginBottom: 12 }} onClick={onFetchInstructions}>
+            Load cooking instructions
+          </button>
+        )}
+        {inst.steps && (
+          <>
+            <div style={{ fontSize: 13, lineHeight: 1.7, color: '#333', whiteSpace: 'pre-wrap', marginBottom: 8 }}>
+              {inst.steps}
+            </div>
+            {inst.ai_generated && (
+              <div style={{ padding: '7px 10px', background: '#f5f5f5', border: '1px dashed #ccc', borderRadius: 6, fontSize: 11, color: '#888', marginBottom: 12 }}>
+                ⚠ AI-generated instructions — may vary from traditional recipe
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
+          <button style={{ ...S.recipeBtn, cursor: 'not-allowed', color: '#999', flex: 1 }} title="Coming soon">📅 Meal Plan</button>
+          <button style={{ ...S.recipeBtnPrimary, flex: 1 }} onClick={onClose}>Done</button>
+        </div>
       </div>
     </div>
   );
@@ -178,6 +241,7 @@ export default function App() {
   const [adminRecipes, setAdminRecipes] = useState([]);
   const [editRecipe, setEditRecipe] = useState(null);
   const [adminTab, setAdminTab] = useState("recipes");
+  const [recipeInstructions, setRecipeInstructions] = useState({});
   const [helpOpen, setHelpOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -779,7 +843,23 @@ export default function App() {
       </div>
 
       {/* Recipe detail modal */}
-      {viewRecipe && <RecipeModal recipe={viewRecipe} onClose={() => setViewRecipe(null)} />}
+      {viewRecipe && (
+        <RecipeModal
+          recipe={viewRecipe}
+          onClose={() => setViewRecipe(null)}
+          instructions={recipeInstructions[viewRecipe.recipe_id]}
+          onFetchInstructions={async () => {
+            const id = viewRecipe.recipe_id;
+            setRecipeInstructions(p => ({ ...p, [id]: { loading: true } }));
+            try {
+              const data = await api.get(`/api/recipes/${id}/instructions`);
+              setRecipeInstructions(p => ({ ...p, [id]: { steps: data.steps, ai_generated: data.ai_generated, loading: false } }));
+            } catch {
+              setRecipeInstructions(p => ({ ...p, [id]: { steps: 'Failed to load instructions. Please try again.', ai_generated: false, loading: false } }));
+            }
+          }}
+        />
+      )}
 
       {/* Edit recipe modal */}
       {editRecipe && (
