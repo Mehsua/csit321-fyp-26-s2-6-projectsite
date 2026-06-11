@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -32,6 +32,7 @@ function setupMocks() {
     if (url === '/api/chat/extract-ingredients') return Promise.resolve({ ingredients: ['chicken', 'garlic'] });
     if (url === '/api/recipes/recommend') return Promise.resolve({ recipes: [mockRecipe] });
     if (url === '/api/chat') return Promise.resolve({ reply: 'Sure, I can help!' });
+    if (url === '/api/shopping-list/generate') return Promise.resolve({ items: [] });
     return Promise.resolve({});
   });
   api.put.mockResolvedValue({ message: 'Preferences saved' });
@@ -39,7 +40,10 @@ function setupMocks() {
 }
 
 beforeEach(() => {
-  api.get.mockResolvedValue({ user: { name: 'Test', email: 'test@test.com', role: 'user' } });
+  api.get.mockImplementation((url) => {
+    if (url === '/api/shopping-list') return Promise.resolve({ list_id: null, items: [] });
+    return Promise.resolve({});
+  });
   setupMocks();
 });
 
@@ -425,4 +429,56 @@ describe('RecipeModal Save Favourite button', () => {
     const saveBtns = await screen.findAllByRole('button', { name: /♡ Save|✓ Saved/i });
     expect(saveBtns.length).toBeGreaterThanOrEqual(2); // one in card, one in modal
   });
+});
+
+describe('Shopping list navigation', () => {
+  it('renders empty shopping list page when 🛒 topbar button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const cartBtn = await screen.findByTitle('Shopping List');
+    await user.click(cartBtn);
+    expect(await screen.findByText('Shopping List')).toBeInTheDocument();
+    expect(screen.getByText(/No items yet/i)).toBeInTheDocument();
+  });
+
+  it('navigates back to chat when Back button is clicked on shopping list page', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const cartBtn = await screen.findByTitle('Shopping List');
+    await user.click(cartBtn);
+    await screen.findByText(/No items yet/i);
+    const backBtn = screen.getByText('← Back');
+    await user.click(backBtn);
+    expect(await screen.findByPlaceholderText(/Type ingredients or ask a question/i)).toBeInTheDocument();
+  });
+});
+
+describe('Session timeout', () => {
+  it('shows expired notification and resets chat after 30 minutes inactivity', async () => {
+    // Install fake timers before render so the useEffect setInterval is registered
+    // with the fake timer system. Start Date.now at an offset so the 30-min
+    // inactivity check passes on the very first 60s tick.
+    const fakeStart = Date.now();
+    vi.useFakeTimers();
+    vi.setSystemTime(fakeStart);
+
+    try {
+      render(<App />);
+
+      // Flush initial effects (session creation, auth check, etc.)
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Move the clock forward 31 min so Date.now() - lastActivityRef > THIRTY_MIN
+      // then trigger the 60s interval tick
+      await act(async () => {
+        vi.advanceTimersByTime(31 * 60 * 1000);
+      });
+
+      expect(screen.getByText(/Session expired/i)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 15000);
 });
