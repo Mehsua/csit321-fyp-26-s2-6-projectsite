@@ -1056,7 +1056,7 @@ export default function App() {
                 </div>
                 <div style={S.recipeBtns}>
                   <button style={S.recipeBtnPrimary} onClick={() => setViewRecipe(r)}>View Recipe</button>
-                  <button style={{ ...S.recipeBtn, color: '#999', borderColor: '#ddd', cursor: 'not-allowed' }} title="Coming in Phase 8">📅 Add to Plan</button>
+                  <button style={S.recipeBtn} onClick={() => addRecipeToMealPlan(r)} title="Add to Meal Plan">📅 Add to Plan</button>
                   <button style={{ ...S.recipeBtn, color: '#dc2626', borderColor: '#fca5a5' }}
                     onClick={() => removeFavourite(r.id || r.recipe_id)}>✕ Remove</button>
                 </div>
