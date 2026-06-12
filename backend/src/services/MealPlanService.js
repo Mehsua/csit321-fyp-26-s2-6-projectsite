@@ -15,7 +15,9 @@ class MealPlanService {
       .eq('is_active', true);
     if (error) throw new Error(error.message);
 
-    const scored = [];
+    const withPerishable = [];
+    const withoutPerishable = [];
+
     for (const recipe of (recipes || [])) {
       if (dietaryTags.length > 0) {
         const recipeTags = (recipe.recipe_dietary_tags || [])
@@ -41,9 +43,7 @@ class MealPlanService {
       if (score === 0) continue;
 
       const hasPerishable = matched.some(ing => ing.is_perishable);
-      if (!hasPerishable) continue;
-
-      scored.push({
+      const entry = {
         recipe_id: recipe.recipe_id,
         name: recipe.name,
         cooking_time: recipe.cooking_time,
@@ -52,13 +52,22 @@ class MealPlanService {
         hasPerishable,
         perishable_warnings: matched.filter(ing => ing.is_perishable).map(ing => ing.name),
         all_required: required,
-      });
+      };
+      if (hasPerishable) withPerishable.push(entry);
+      else withoutPerishable.push(entry);
     }
 
-    scored.sort((a, b) => b.score - a.score);
+    withPerishable.sort((a, b) => b.score - a.score);
+    withoutPerishable.sort((a, b) => b.score - a.score);
 
+    // Day 1 filled from perishable-matched recipes first; remaining days from any scored recipe
     const RECIPES_PER_DAY = 2;
-    const selected = scored.slice(0, numDays * RECIPES_PER_DAY);
+    const day1Recipes = withPerishable.slice(0, RECIPES_PER_DAY);
+    const remaining = [...withPerishable.slice(RECIPES_PER_DAY), ...withoutPerishable];
+    const selected = [
+      ...day1Recipes,
+      ...remaining.slice(0, (numDays - 1) * RECIPES_PER_DAY),
+    ];
 
     const sessionSet = new Set(userIngredients);
     const topUpMap = new Map();

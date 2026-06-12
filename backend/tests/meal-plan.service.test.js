@@ -106,8 +106,10 @@ describe('MealPlanService.generateAndSavePlan', () => {
 
     const allRecipes = result.days.flatMap(d => d.recipes);
     const names = allRecipes.map(r => r.name);
+    // Pasta Dish has no matching ingredients (pasta/tomato not in session) → score 0, excluded
     expect(names).not.toContain('Pasta Dish');
-    expect(names).not.toContain('Garlic Rice');
+    // Garlic Rice has garlic matching → score > 0, eligible for Days 2-3 under new perishable-first logic
+    expect(names).toContain('Garlic Rice');
   });
 
   test('does not save to DB when userId is null', async () => {
@@ -147,6 +149,43 @@ describe('MealPlanService.generateAndSavePlan', () => {
 
     const allRecipes = result.days.flatMap(d => d.recipes);
     expect(allRecipes).toHaveLength(0);
+  });
+
+  test('includes non-perishable-matched recipes in Days 2-3', async () => {
+    const rows = [
+      {
+        recipe_id: 'r-peri', name: 'Peri Recipe', cooking_time: 30,
+        recipe_ingredients: [{ is_optional: false, ingredients: { name: 'spinach', is_perishable: true } }],
+        recipe_dietary_tags: [], nutrition_info: null,
+      },
+      {
+        recipe_id: 'r-nonperi', name: 'Non-Peri Recipe', cooking_time: 20,
+        recipe_ingredients: [{ is_optional: false, ingredients: { name: 'rice', is_perishable: false } }],
+        recipe_dietary_tags: [], nutrition_info: null,
+      },
+    ];
+
+    supabaseAdmin.from = jest.fn().mockImplementation((table) => {
+      if (table === 'recipes') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockResolvedValue({ data: rows, error: null }),
+        };
+      }
+      if (table === 'meal_plans') {
+        return {
+          insert: jest.fn().mockReturnThis(),
+          select: jest.fn().mockReturnThis(),
+          single: jest.fn().mockResolvedValue({ data: { plan_id: 'p-1' }, error: null }),
+        };
+      }
+      return { insert: jest.fn().mockResolvedValue({ error: null }) };
+    });
+
+    const svc = new MealPlanService();
+    const result = await svc.generateAndSavePlan('u-1', ['spinach', 'rice'], 2, []);
+    const allRecipeIds = result.days.flatMap(d => d.recipes.map(r => r.recipe_id));
+    expect(allRecipeIds).toContain('r-nonperi');
   });
 });
 
