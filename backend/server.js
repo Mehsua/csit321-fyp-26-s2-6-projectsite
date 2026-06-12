@@ -12,6 +12,7 @@ const recipeRouter = require('./src/routes/recipes');
 const usersRouter = require('./src/routes/users');
 const shoppingListRouter = require('./src/routes/shoppingList');
 const mealPlanRouter = require('./src/routes/mealPlan');
+const supportRouter = require('./src/routes/support');
 const errorHandler = require('./src/middleware/errorHandler');
 
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/recipes', recipeRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/shopping-list', shoppingListRouter);
 app.use('/api/meal-plan', mealPlanRouter);
+app.use('/api/support', supportRouter);
 
 app.use(errorHandler);
 
