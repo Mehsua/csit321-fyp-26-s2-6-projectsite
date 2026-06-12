@@ -345,3 +345,27 @@
 | P10.5-30 | Browser forgot password | Section 5.2 | User receives reset email | Forgot password? — enter email | Email received | PENDING — requires live Supabase | PENDING | Manual |
 | P10.5-31 | Browser admin reset password | Section 5.12 | Admin sends reset to user | Admin — Users — Reset Pwd | Alert: Password reset email sent | PENDING — manual | PENDING | Manual |
 | P10.5-32 | Browser meal plan perishable fix | Section 4.5.6 | Meal plan Days 2-3 include non-perishable | Generate plan with mixed ingredients | Day 2/3 shows recipes without perishable match | PENDING — manual | PENDING | Manual |
+
+---
+
+## Phase 11 — Testing Additions
+
+| ID | Feature | Spec Reference | Test Scenario | Test Steps | Expected Result | Actual Result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|---|---|
+| P11-01 | SessionService.createGuestSession success | SD-09 | Returns session row with user_id=null | Unit test: mock insert → success | `{ session_id, user_id: null }` | Jest PASS | PASS | Automated |
+| P11-02 | SessionService.createGuestSession DB error | SD-09 | DB error → throws status 500 | Unit test: mock insert → error | Throws `{ status: 500 }` | Jest PASS | PASS | Automated |
+| P11-03 | SessionService.createAuthSession success | SD-09 | Returns session row with user_id | Unit test: mock insert → success | `{ session_id, user_id }` | Jest PASS | PASS | Automated |
+| P11-04 | SessionService.createAuthSession DB error | SD-09 | DB error → throws status 500 | Unit test: mock insert → error | Throws `{ status: 500 }` | Jest PASS | PASS | Automated |
+| P11-05 | SessionService.updateActivity | Section 4.4 SD-09 | Calls update on sessions with last_activity and expires_at | Unit test: verify DB update call | update called with correct fields | Jest PASS | PASS | Automated |
+| P11-06 | AuthService.logout — deactivates sessions | SD-07 | Valid token → sessions.is_active=false | Unit test: mock getUser + update | update called with is_active=false | Jest PASS | PASS | Automated |
+| P11-07 | AuthService.logout — missing user | SD-07 | getUser error → resolves silently | Unit test: mock getUser → error | Resolves undefined, from() not called | Jest PASS | PASS | Automated |
+| P11-08 | AuthService.getMe — success | SD-07 | Valid userId returns user profile | Unit test: mock DB select | `{ email, role, name, is_active }` | Jest PASS | PASS | Automated |
+| P11-09 | AuthService.getMe — not found | SD-07 | Missing userId throws 404 | Unit test: mock DB → null | Throws `{ status: 404 }` | Jest PASS | PASS | Automated |
+| P11-10 | AuthService.login — deactivated | Section 5.1 RS | is_active=false → 401 | Unit test: mock user with is_active=false | Throws `{ status: 401, message: "Account has been deactivated" }` | Jest PASS | PASS | Automated |
+| P11-11 | GET /api/health | Section 4.8 Admin | Health endpoint returns 200 + JSON | Integration: `GET /api/health` | `{ status: "ok", timestamp }` | Jest PASS | PASS | Automated |
+| P11-12 | ShoppingListPage — renders items | Section 4.8 wireframe 09 | Items rendered grouped by category | Render with 3 items across 3 categories | chicken, milk, garlic + category headers | Vitest PASS | PASS | Automated |
+| P11-13 | ShoppingListPage — checkbox toggle | Section 4.8 wireframe 09 | Clicking item toggles checked count | Click first item row | "1 checked" visible | Vitest PASS | PASS | Automated |
+| P11-14 | ShoppingListPage — Clear All | Section 4.8 wireframe 09 | Clear All calls onClear callback | Click Clear All | onClear called | Vitest PASS | PASS | Automated |
+| P11-15 | ShoppingListPage — Export button | Section 4.8 wireframe 09 | Export button present | Render with items | "Export ↓" button visible | Vitest PASS | PASS | Automated |
+| P11-16 | ShoppingListPage — guest banner | Section 4.8 wireframe 09 | user=null shows guest notice | Render with user=null | Guest text visible | Vitest PASS | PASS | Automated |
+| P11-17 | ShoppingListPage — no guest banner | Section 4.8 wireframe 09 | Logged-in user → no guest notice | Render with user object | Guest text absent | Vitest PASS | PASS | Automated |
