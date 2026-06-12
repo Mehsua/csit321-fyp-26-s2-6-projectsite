@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('../db/supabase');
+const sessionService = require('../services/SessionService');
 
 async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -37,6 +38,8 @@ async function authenticate(req, res, next) {
     name: userRow.name,
     role: userRow.role,
   };
+
+  sessionService.updateActivity(userRow.user_id).catch(() => {});
 
   next();
 }
