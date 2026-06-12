@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { api, setToken, getToken } from "./lib/api";
 import IngredientConfirmMsg from './components/IngredientConfirmMsg';
+import SupportAnswerMsg from './components/SupportAnswerMsg';
 import ShoppingListPage from './components/ShoppingListPage';
 import MealPlanPage from './components/MealPlanPage';
 
@@ -400,6 +401,32 @@ export default function App() {
 
     setLoading(true);
 
+    // Support detection: help/troubleshooting queries bypass ingredient flow
+    const supportKeywords = ['help', 'support', 'contact', 'problem', 'issue', 'error', "can't", 'cannot', 'not working', 'broken', 'forgot', 'guide', 'tutorial', 'how do i', 'how to use'];
+    const msgLower = msg.toLowerCase();
+    const isSupportQuery = supportKeywords.some(k => msgLower.includes(k)) && !msg.includes(',');
+
+    if (isSupportQuery) {
+      try {
+        const result = await api.post('/api/support/query', { message: msg });
+        const supportMsg = {
+          role: 'assistant',
+          type: 'support_answer',
+          id: Date.now(),
+          matched: result.matched,
+          question: result.question,
+          answer: result.answer,
+          category: result.category,
+          escalated: false,
+        };
+        updateMessages([...newMsgs, supportMsg]);
+        setLoading(false);
+        return;
+      } catch {
+        // Fall through to ingredient check or general chat on error
+      }
+    }
+
     // Ingredient extraction + confirmation flow
     const ingredientKeywords = ["have", "got", "using", "use", "with", "make", "cook", "ingredients", "fridge"];
     const isIngredientQuery = ingredientKeywords.some(k => msg.toLowerCase().includes(k)) || msg.includes(",");
@@ -526,6 +553,29 @@ export default function App() {
     }
 
     setLoading(false);
+  }
+
+  async function handleEscalate(msgId) {
+    const sid = activeSession;
+    const session = sessions.find(s => s.id === sid);
+    const supportMsg = session?.messages.find(m => m.id === msgId);
+    if (!supportMsg || supportMsg.escalated) return;
+    try {
+      const result = await api.post('/api/support/escalate', {
+        message: supportMsg.question || supportMsg.content || 'User requested support escalation',
+      });
+      setSessions(prev => prev.map(s =>
+        s.id === sid
+          ? { ...s, messages: s.messages.map(m => m.id === msgId ? { ...m, escalated: true, contactInfo: result.contact_info } : m) }
+          : s
+      ));
+    } catch {
+      setSessions(prev => prev.map(s =>
+        s.id === sid
+          ? { ...s, messages: s.messages.map(m => m.id === msgId ? { ...m, escalated: true, contactInfo: 'support@foodbot.com' } : m) }
+          : s
+      ));
+    }
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -777,6 +827,21 @@ export default function App() {
           )}
 
           {messages.map((msg, i) => {
+            if (msg.type === 'support_answer') {
+              return (
+                <div key={i} style={{ padding: '4px 40px' }}>
+                  <SupportAnswerMsg
+                    matched={msg.matched}
+                    question={msg.question}
+                    answer={msg.answer}
+                    category={msg.category}
+                    escalated={msg.escalated}
+                    contactInfo={msg.contactInfo}
+                    onEscalate={() => handleEscalate(msg.id)}
+                  />
+                </div>
+              );
+            }
             if (msg.type === 'ingredient_confirm') {
               return (
                 <div key={i} style={{ padding: '4px 40px' }}>
