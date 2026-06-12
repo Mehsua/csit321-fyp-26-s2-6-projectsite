@@ -186,3 +186,16 @@ describe('AuthService.login', () => {
     ).rejects.toMatchObject({ status: 423, message: 'Account locked' });
   });
 });
+
+describe('AuthService.forgotPassword', () => {
+  test('calls supabase auth resetPasswordForEmail with the email', async () => {
+    supabaseAdmin.auth.resetPasswordForEmail = jest.fn().mockResolvedValue({ error: null });
+    await AuthService.forgotPassword('user@example.com');
+    expect(supabaseAdmin.auth.resetPasswordForEmail).toHaveBeenCalledWith('user@example.com');
+  });
+
+  test('resolves without throwing even if email is not registered (do not reveal account existence)', async () => {
+    supabaseAdmin.auth.resetPasswordForEmail = jest.fn().mockResolvedValue({ error: { message: 'User not found' } });
+    await expect(AuthService.forgotPassword('nobody@example.com')).resolves.toBeUndefined();
+  });
+});

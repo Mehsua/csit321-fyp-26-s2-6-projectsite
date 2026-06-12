@@ -51,4 +51,13 @@ async function getMe(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, getMe };
+async function forgotPassword(req, res, next) {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'email is required' });
+  try {
+    await AuthService.forgotPassword(email);
+    res.json({ message: 'If that email is registered, a reset link has been sent.' });
+  } catch (err) { next(err); }
+}
+
+module.exports = { register, login, logout, getMe, forgotPassword };

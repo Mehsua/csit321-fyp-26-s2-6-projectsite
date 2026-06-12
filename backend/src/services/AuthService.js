@@ -134,6 +134,11 @@ class AuthService {
     }
     return data;
   }
+
+  async forgotPassword(email) {
+    // Always resolves — do not reveal whether email is registered (security)
+    await supabaseAdmin.auth.resetPasswordForEmail(email).catch(() => {});
+  }
 }
 
 module.exports = new AuthService();
