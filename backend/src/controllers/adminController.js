@@ -96,8 +96,23 @@ async function clearResolvedLogs(req, res, next) {
   catch (err) { next(err); }
 }
 
+async function resetPassword(req, res, next) {
+  try {
+    await adminService.resetUserPassword(req.params.id);
+    res.json({ message: 'Password reset email sent' });
+  } catch (err) { next(err); }
+}
+
+async function getRegistrationStats(req, res, next) {
+  try {
+    const data = await adminService.getDailyRegistrations();
+    res.json({ registrations: data });
+  } catch (err) { next(err); }
+}
+
 module.exports = {
   getDashboard, listRecipes, createRecipe, updateRecipe, deleteRecipe,
   listUsers, lockUser, unlockUser, deactivateUser, reactivateUser,
+  resetPassword, getRegistrationStats,
   listErrorLogs, resolveErrorLog, clearResolvedLogs,
 };

@@ -229,3 +229,60 @@ describe('AdminService.reactivateUser', () => {
     expect(chain.update).toHaveBeenCalledWith({ is_active: true, is_locked: false, fail_count: 0, lock_until: null });
   });
 });
+
+// ── resetUserPassword ────────────────────────────────────────────────────────
+
+describe('AdminService.resetUserPassword', () => {
+  test('calls supabase auth generateLink for the user email', async () => {
+    supabaseAdmin.from = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { email: 'test@example.com' }, error: null }),
+    });
+    supabaseAdmin.auth = {
+      admin: {
+        generateLink: jest.fn().mockResolvedValue({ data: { properties: { action_link: 'https://reset.link' } }, error: null }),
+      },
+    };
+    const svc = new AdminService();
+    await svc.resetUserPassword('u-1');
+    expect(supabaseAdmin.auth.admin.generateLink).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'recovery', email: 'test@example.com' })
+    );
+  });
+
+  test('throws if user not found', async () => {
+    supabaseAdmin.from = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: null, error: { message: 'Not found' } }),
+    });
+    const svc = new AdminService();
+    await expect(svc.resetUserPassword('bad-id')).rejects.toBeDefined();
+  });
+});
+
+// ── getDailyRegistrations ─────────────────────────────────────────────────────
+
+describe('AdminService.getDailyRegistrations', () => {
+  test('returns array of { date, count } for last 7 days', async () => {
+    const rows = [
+      { created_at: '2026-06-10T10:00:00Z' },
+      { created_at: '2026-06-10T14:00:00Z' },
+      { created_at: '2026-06-11T09:00:00Z' },
+    ];
+    supabaseAdmin.from = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      gte: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ data: rows, error: null }),
+    });
+    const svc = new AdminService();
+    const result = await svc.getDailyRegistrations();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(7);
+    result.forEach(r => {
+      expect(r).toHaveProperty('date');
+      expect(r).toHaveProperty('count');
+    });
+  });
+});
