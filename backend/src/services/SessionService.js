@@ -36,6 +36,19 @@ class SessionService {
     if (error) throw Object.assign(new Error('Failed to create session.'), { status: 500 });
     return data;
   }
+
+  async updateActivity(userId) {
+    const now = new Date();
+    const expires = new Date(now.getTime() + 30 * 60 * 1000);
+    await supabaseAdmin
+      .from('sessions')
+      .update({
+        last_activity: now.toISOString(),
+        expires_at: expires.toISOString(),
+      })
+      .eq('user_id', userId)
+      .eq('is_active', true);
+  }
 }
 
 module.exports = new SessionService();

@@ -286,6 +286,42 @@ class AdminService {
       .eq('user_id', userId);
     if (error) throw error;
   }
+
+  async resetUserPassword(userId) {
+    const { data: userRow, error: lookupError } = await supabaseAdmin
+      .from('users')
+      .select('email')
+      .eq('user_id', userId)
+      .single();
+    if (lookupError || !userRow) throw new Error('User not found');
+
+    const { error } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email: userRow.email,
+    });
+    if (error) throw error;
+  }
+
+  async getDailyRegistrations() {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .select('created_at')
+      .gte('created_at', sevenDaysAgo)
+      .eq('role', 'registered');
+    if (error) throw error;
+
+    const counts = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      counts[d.toISOString().slice(0, 10)] = 0;
+    }
+    for (const row of (data || [])) {
+      const day = row.created_at.slice(0, 10);
+      if (day in counts) counts[day]++;
+    }
+    return Object.entries(counts).map(([date, count]) => ({ date, count }));
+  }
 }
 
 module.exports = AdminService;

@@ -83,32 +83,57 @@ describe('PUT /api/admin/users/:id/lock', () => {
   });
 });
 
-describe('GET /api/admin/error-logs', () => {
+describe('GET /api/admin/logs', () => {
   test('returns 200 with logs list', async () => {
     AdminService.prototype.getErrorLogs.mockResolvedValue({ logs: [], total: 0 });
-    const res = await request(app).get('/api/admin/error-logs').set('Authorization', 'Bearer token');
+    const res = await request(app).get('/api/admin/logs').set('Authorization', 'Bearer token');
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('logs');
   });
 });
 
-describe('PUT /api/admin/error-logs/:id/resolve', () => {
+describe('PATCH /api/admin/logs/:id', () => {
   test('returns 200 with message on success', async () => {
     AdminService.prototype.resolveErrorLog.mockResolvedValue();
     const res = await request(app)
-      .put('/api/admin/error-logs/log-1/resolve')
+      .patch('/api/admin/logs/log-1')
       .set('Authorization', 'Bearer token');
     expect(res.status).toBe(200);
     expect(res.body.message).toBeDefined();
   });
 });
 
-describe('DELETE /api/admin/error-logs/resolved', () => {
+describe('DELETE /api/admin/logs/resolved', () => {
   test('returns 204 on success', async () => {
     AdminService.prototype.clearResolvedLogs.mockResolvedValue();
     const res = await request(app)
-      .delete('/api/admin/error-logs/resolved')
+      .delete('/api/admin/logs/resolved')
       .set('Authorization', 'Bearer token');
     expect(res.status).toBe(204);
+  });
+});
+
+describe('POST /api/admin/users/:id/reset-password', () => {
+  test('returns 200 with message on success', async () => {
+    AdminService.prototype.resetUserPassword.mockResolvedValue();
+    const res = await request(app)
+      .post('/api/admin/users/u-1/reset-password')
+      .set('Authorization', 'Bearer test-token');
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Password reset email sent');
+  });
+});
+
+describe('GET /api/admin/stats/registrations', () => {
+  test('returns 200 with registrations array', async () => {
+    AdminService.prototype.getDailyRegistrations.mockResolvedValue([
+      { date: '2026-06-10', count: 2 },
+      { date: '2026-06-11', count: 1 },
+    ]);
+    const res = await request(app)
+      .get('/api/admin/stats/registrations')
+      .set('Authorization', 'Bearer test-token');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.registrations)).toBe(true);
   });
 });

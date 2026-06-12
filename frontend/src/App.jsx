@@ -113,11 +113,19 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
   const inst = instructions || {};
 
   return (
-    <div style={S.modalOverlay} onClick={onClose}>
-      <div style={{ ...S.modalCard, width: 520 }} onClick={e => e.stopPropagation()}>
+    <div style={S.modalOverlay} role="presentation" onClick={onClose}>
+      <div
+        style={{ ...S.modalCard, width: 520 }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="recipe-modal-title"
+        tabIndex={-1}
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
           <div>
-            <div style={S.modalTitle}>{recipe.name}</div>
+            <div id="recipe-modal-title" style={S.modalTitle}>{recipe.name}</div>
             <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
               {recipe.cookTime} min &nbsp;|&nbsp;
               <span style={S.badge(pct >= 70 ? "match" : pct >= 40 ? "warn" : "red")}>{pct}% match</span>
@@ -266,6 +274,12 @@ export default function App() {
   const [favourites, setFavourites] = useState([]);
   const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
   const [authError, setAuthError] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showForgotPwd, setShowForgotPwd] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMsg, setForgotMsg] = useState('');
+  const [regDietaryTags, setRegDietaryTags] = useState([]);
+  const [regAllergens, setRegAllergens] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [prefs, setPrefs] = useState({ halal: false, vegetarian: false, vegan: false, glutenFree: false, allergens: [] });
   const [recipeInstructions, setRecipeInstructions] = useState({});
@@ -646,21 +660,41 @@ export default function App() {
 
   async function handleRegister(e) {
     e.preventDefault();
-    setAuthError("");
+    setAuthError('');
     if (!authForm.name || !authForm.email || authForm.password.length < 8) {
-      setAuthError("Please fill all fields. Password must be at least 8 characters.");
+      setAuthError('Please fill all fields. Password must be at least 8 characters.');
+      return;
+    }
+    if (authForm.password !== confirmPassword) {
+      setAuthError('Passwords do not match.');
       return;
     }
     try {
-      await api.post("/api/auth/register", {
+      await api.post('/api/auth/register', {
         email: authForm.email,
         password: authForm.password,
         name: authForm.name,
+        dietaryTags: regDietaryTags,
+        allergens: regAllergens,
       });
-      setPage("login");
-      setAuthError("");
+      setPage('login');
+      setAuthError('');
+      setConfirmPassword('');
+      setRegDietaryTags([]);
+      setRegAllergens([]);
     } catch (err) {
-      setAuthError(err.message || "Registration failed. Please try again.");
+      setAuthError(err.message || 'Registration failed. Please try again.');
+    }
+  }
+
+  async function handleForgotPassword(e) {
+    e.preventDefault();
+    setForgotMsg('');
+    try {
+      await api.post('/api/auth/forgot-password', { email: forgotEmail });
+      setForgotMsg('If that email is registered, a reset link has been sent.');
+    } catch (_) {
+      setForgotMsg('If that email is registered, a reset link has been sent.');
     }
   }
 
@@ -810,7 +844,7 @@ export default function App() {
             </span>
           </div>
         )}
-        <div style={S.messages}>
+        <div style={S.messages} aria-live="polite" aria-label="Chat messages">
           {messages.length === 0 && (
             <div style={{ textAlign: "center", padding: "60px 40px" }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🍳</div>
@@ -875,7 +909,13 @@ export default function App() {
           {loading && messages[messages.length - 1]?.role !== "assistant" && (
             <div style={S.msgWrap(false)}>
               <div style={S.avatar("#16a34a")}>FB</div>
-              <div style={{ ...S.bubble(false), color: "#999" }}>Thinking…</div>
+              <div style={{ ...S.bubble(false), color: "#999" }}>
+                <span aria-label="Loading response">
+                  <span className="dot">●</span>
+                  <span className="dot">●</span>
+                  <span className="dot">●</span>
+                </span>
+              </div>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -900,7 +940,7 @@ export default function App() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <button style={S.sendBtn} onClick={() => sendMessage()} aria-label="Send">
+            <button type="button" style={S.sendBtn} aria-label="Send message" onClick={() => sendMessage()}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 8L2 2l2.5 6L2 14l12-6z" fill="#fff" /></svg>
             </button>
           </div>
@@ -1030,7 +1070,7 @@ export default function App() {
                 </div>
                 <div style={S.recipeBtns}>
                   <button style={S.recipeBtnPrimary} onClick={() => setViewRecipe(r)}>View Recipe</button>
-                  <button style={{ ...S.recipeBtn, color: '#999', borderColor: '#ddd', cursor: 'not-allowed' }} title="Coming in Phase 8">📅 Add to Plan</button>
+                  <button style={S.recipeBtn} onClick={() => addRecipeToMealPlan(r)} title="Add to Meal Plan">📅 Add to Plan</button>
                   <button style={{ ...S.recipeBtn, color: '#dc2626', borderColor: '#fca5a5' }}
                     onClick={() => removeFavourite(r.id || r.recipe_id)}>✕ Remove</button>
                 </div>
@@ -1057,20 +1097,77 @@ export default function App() {
           </div>
           {authError && <div style={{ background: "#fef2f2", color: "#dc2626", padding: "8px 12px", borderRadius: 8, fontSize: 13, marginBottom: 12 }}>{authError}</div>}
           <form onSubmit={isLogin ? handleLogin : handleRegister}>
-            {!isLogin && (
-              <div style={S.formGroup}>
-                <label style={S.label}>Name</label>
-                <input style={S.input} placeholder="Your name" value={authForm.name} onChange={e => setAuthForm(p => ({ ...p, name: e.target.value }))} />
-              </div>
+            {isLogin ? (
+              <>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Email</label>
+                  <input style={S.input} type="email" placeholder="you@email.com" value={authForm.email} onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))} />
+                </div>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Password</label>
+                  <input style={S.input} type="password" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
+                </div>
+                {isLogin && (
+                  <div style={{ textAlign: 'right', marginBottom: 8, marginTop: -8 }}>
+                    <span style={{ fontSize: 12, color: '#555', textDecoration: 'underline', cursor: 'pointer' }}
+                      onClick={() => { setShowForgotPwd(true); setForgotMsg(''); setForgotEmail(''); }}>
+                      Forgot password?
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Full Name</label>
+                  <input style={S.input} placeholder="e.g. John Smith" value={authForm.name}
+                    onChange={e => setAuthForm(p => ({ ...p, name: e.target.value }))} />
+                </div>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Email Address</label>
+                  <input style={S.input} type="email" placeholder="you@example.com" value={authForm.email}
+                    onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))} />
+                </div>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Password <span style={{ fontWeight: 400, color: '#888' }}>(min. 8 characters)</span></label>
+                  <input style={S.input} type="password" placeholder="••••••••" value={authForm.password}
+                    onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
+                </div>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Confirm Password</label>
+                  <input style={S.input} type="password" placeholder="Re-enter password" value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)} />
+                </div>
+                <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '16px 0' }} />
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Dietary Preferences <span style={{ fontWeight: 400, color: '#888' }}>(Optional)</span></div>
+                {['Halal', 'Vegan', 'Vegetarian', 'Gluten-Free'].map(tag => (
+                  <div key={tag} style={S.checkRow}>
+                    <div style={S.checkBox(regDietaryTags.includes(tag))}
+                      onClick={() => setRegDietaryTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}>
+                      {regDietaryTags.includes(tag) && <span style={{ color: '#fff', fontSize: 12 }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: 13 }}>{tag}</span>
+                  </div>
+                ))}
+                <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '16px 0' }} />
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Allergen Alerts <span style={{ fontWeight: 400, color: '#888' }}>(Optional)</span></div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 0' }}>
+                  {['Peanuts', 'Dairy', 'Gluten', 'Shellfish', 'Eggs', 'Soy'].map(allergen => (
+                    <div key={allergen} style={{ ...S.checkRow, minWidth: '50%' }}>
+                      <div style={S.checkBox(regAllergens.includes(allergen))}
+                        onClick={() => setRegAllergens(prev => prev.includes(allergen) ? prev.filter(a => a !== allergen) : [...prev, allergen])}>
+                        {regAllergens.includes(allergen) && <span style={{ color: '#fff', fontSize: 12 }}>✓</span>}
+                      </div>
+                      <span style={{ fontSize: 13 }}>{allergen}</span>
+                    </div>
+                  ))}
+                </div>
+                <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '16px 0' }} />
+                <div style={{ fontSize: 11, color: '#777', marginBottom: 16, lineHeight: 1.6 }}>
+                  By creating an account you agree to our Terms of Service and Privacy Policy. Your personal data is handled in compliance with <strong>PDPA (Singapore)</strong>.
+                </div>
+              </>
             )}
-            <div style={S.formGroup}>
-              <label style={S.label}>Email</label>
-              <input style={S.input} type="email" placeholder="you@email.com" value={authForm.email} onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))} />
-            </div>
-            <div style={S.formGroup}>
-              <label style={S.label}>Password</label>
-              <input style={S.input} type="password" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
-            </div>
             <button type="submit" style={S.formBtn}>{isLogin ? "Sign in" : "Create account"}</button>
           </form>
           <div style={S.formLink} onClick={() => { setPage(isLogin ? "register" : "login"); setAuthError(""); }}>
@@ -1096,21 +1193,23 @@ export default function App() {
           FoodBot
         </div>
         <div style={S.topRight}>
-          <button style={S.btn} title="Help / FAQ" onClick={() => setHelpOpen(true)}>❓</button>
+          <button style={S.btn} title="Help / FAQ" aria-label="Help and FAQ" onClick={() => setHelpOpen(true)}>❓</button>
           <button
             style={{ ...S.btn, color: page === 'shopping-list' ? '#16a34a' : '#555' }}
             title="Shopping List"
+            aria-label="Shopping list"
             onClick={() => setPage('shopping-list')}
           >
             🛒
           </button>
-          <button style={S.btn} title="Reset Chat" onClick={resetChat}>↺</button>
+          <button style={S.btn} title="Reset Chat" aria-label="Reset chat" onClick={resetChat}>↺</button>
           {user ? (
             <>
               {user.isAdmin && <button style={{ ...S.btn, color: page === "admin" ? "#16a34a" : "#555" }} onClick={() => setPage("admin")}>Admin</button>}
-              <button title="My Favourites" style={{ ...S.btn, color: page === "favourites" ? "#16a34a" : "#555" }} onClick={() => setPage("favourites")}>♡</button>
+              <button title="My Favourites" aria-label="My favourites" style={{ ...S.btn, color: page === "favourites" ? "#16a34a" : "#555" }} onClick={() => setPage("favourites")}>♡</button>
               <button
                 title="Meal Plan"
+                aria-label="Meal plan"
                 style={{ ...S.btn, color: page === 'meal-plan' ? '#16a34a' : '#555' }}
                 onClick={() => setPage('meal-plan')}
               >
@@ -1132,6 +1231,32 @@ export default function App() {
       {sessionExpired && (
         <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: '#dc2626', color: '#fff', padding: '10px 20px', borderRadius: 8, zIndex: 200, fontSize: 13, fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
           ⏱ Session expired — starting a new conversation…
+        </div>
+      )}
+
+      {showForgotPwd && (
+        <div style={S.modalOverlay} onClick={() => setShowForgotPwd(false)}>
+          <div style={{ ...S.modalCard, width: 360 }} onClick={e => e.stopPropagation()}>
+            <div style={S.modalTitle}>Reset Password</div>
+            {forgotMsg ? (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#16a34a', marginBottom: 16 }}>
+                {forgotMsg}
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword}>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Email Address</label>
+                  <input style={S.input} type="email" placeholder="you@email.com"
+                    value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} />
+                </div>
+                <button type="submit" style={S.formBtn}>Send Reset Email</button>
+              </form>
+            )}
+            <div style={{ ...S.formLink, color: '#888', marginTop: 12 }}
+              onClick={() => setShowForgotPwd(false)}>
+              ← Back to login
+            </div>
+          </div>
         </div>
       )}
 
@@ -1167,7 +1292,7 @@ export default function App() {
         )}
 
         {/* Main content */}
-        <div style={S.main}>
+        <div id="main-content" style={S.main}>
           {page === "chat" && renderChat()}
           {page === "login" && renderAuth(true)}
           {page === "register" && renderAuth(false)}

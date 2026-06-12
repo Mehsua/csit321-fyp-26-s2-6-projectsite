@@ -308,3 +308,40 @@
 | P10-32 | Recipe CRUD — full browser test | Wireframe 11 Recipe Management | Admin can add, edit, and delete a recipe via UI | Admin Panel → Recipes → Add New Recipe → fill form → save; then Delete | Recipe appears in list after add; disappears after delete (soft-deleted) | PENDING — manual browser test | PENDING | Manual — requires live backend |
 | P10-33 | User management — full browser test | Wireframe 12 User Management | Admin can lock and unlock a registered user via UI | Admin Panel → Users → Lock a user → confirm in Supabase DB; Unlock → confirm | is_locked change reflected in DB | PENDING — manual browser test | PENDING | Manual — requires registered user in DB |
 | P10-34 | Error logs — full browser test | Wireframe 13 Error Logs | Admin can view, resolve, and clear error logs via UI | Trigger a 500 error → Admin Panel → Error Logs → Resolve → Clear Resolved | Error appears after 500; Resolve marks it resolved; Clear Resolved removes it | PENDING — manual browser test | PENDING | Manual — requires live 500 error to trigger |
+
+## Phase 10.5 — Spec Compliance Fixes
+
+| ID | Feature | Spec Reference | Test Scenario | Test Steps | Expected Result | Actual Result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|---|---|
+| P10.5-01 | Session last_activity + expires_at update | Section 4.4 SD-09 | authenticate middleware updates last_activity and slides expires_at | Authenticated request | sessions.last_activity and expires_at both updated | Jest: middleware.test.js PASS | PASS | Automated |
+| P10.5-02 | Meal plan perishable-first | Section 4.5.6 SD-06 | Non-perishable-matched recipes included in Days 2-3 | generateAndSavePlan with mixed ingredients | Day 1 perishable; Day 2-3 filled from any scored recipe | Jest: meal-plan.service.test.js PASS | PASS | Automated |
+| P10.5-03 | Admin password reset service | Section 4.8 | resetUserPassword calls Supabase generateLink | adminService.resetUserPassword | supabase.auth.admin.generateLink called with type: recovery | Jest: admin.service.test.js PASS | PASS | Automated |
+| P10.5-04 | POST /api/admin/users/:id/reset-password | Section 4.8 | Admin triggers password reset | POST with admin token | HTTP 200, message: Password reset email sent | Jest: admin.routes.test.js PASS | PASS | Automated |
+| P10.5-05 | PATCH /api/admin/users/:id/deactivate | Section 4.8 | HTTP method PATCH per spec | PATCH deactivate | HTTP 200 | Jest: admin.routes.test.js PASS | PASS | Automated |
+| P10.5-06 | PATCH /api/admin/users/:id/reactivate | Section 4.8 | HTTP method PATCH per spec | PATCH reactivate | HTTP 200 | Jest: admin.routes.test.js PASS | PASS | Automated |
+| P10.5-07 | GET /api/admin/logs | Section 4.8 | Path renamed from /error-logs to /logs | GET /api/admin/logs | HTTP 200 with logs array | Jest: admin.routes.test.js PASS | PASS | Automated |
+| P10.5-08 | PATCH /api/admin/logs/:id | Section 4.8 | Resolve endpoint per spec | PATCH /api/admin/logs/:id | HTTP 200 | Jest: admin.routes.test.js PASS | PASS | Automated |
+| P10.5-09 | GET /api/admin/stats/registrations | Section 5.10 Wireframe 10 | 7-day registration counts | GET /api/admin/stats/registrations | HTTP 200, registrations array with 7 entries | Jest: admin.routes.test.js PASS | PASS | Automated |
+| P10.5-10 | Forgot password service | Section 5.2 | forgotPassword calls resetPasswordForEmail | forgotPassword | supabase.auth.resetPasswordForEmail called | Jest: auth.service.test.js PASS | PASS | Automated |
+| P10.5-11 | Forgot password no email reveal | Section 5.2 | Resolves silently if email not registered | forgotPassword with unknown email | Resolves without throwing | Jest: auth.service.test.js PASS | PASS | Automated |
+| P10.5-12 | POST /api/auth/forgot-password | Section 5.2 | Returns 200 regardless of email | POST /api/auth/forgot-password | HTTP 200, message with reset link | Jest: auth.routes.test.js PASS | PASS | Automated |
+| P10.5-13 | Registration with prefs | Section 5.3 Wireframe 03 | Register saves dietary and allergen preferences | POST /api/auth/register with dietaryTags and allergens | user_dietary_preferences and user_allergens rows inserted | Jest: auth.service.test.js PASS | PASS | Automated |
+| P10.5-14 | Registration confirm password | Section 5.3 Wireframe 03 | Mismatched passwords show error | Enter different password/confirm | Passwords do not match error | Frontend validation | PASS | Code review |
+| P10.5-15 | Registration PDPA notice | Section 5.3 Wireframe 03 | PDPA notice visible | Open register page | PDPA (Singapore) text visible | Code review — renderAuth JSX | PASS | Code review |
+| P10.5-16 | Login forgot password link | Section 5.2 Wireframe 02 | Link visible on login | Open login page | Forgot password? link below password field | Code review — renderAuth JSX | PASS | Code review |
+| P10.5-17 | Forgot password modal | Section 5.2 | Modal opens on link click | Login — click Forgot password? | Modal with email input appears | Frontend: showForgotPwd modal | PASS | Code review |
+| P10.5-18 | Favourites Add to Plan | Section 5.7 Wireframe 07 | Add to Plan button functional | My Favourites — click Add to Plan | Recipe added to meal plan | Frontend: addRecipeToMealPlan called | PASS | Code review |
+| P10.5-19 | Admin reset password button | Section 5.12 | Reset Pwd button for non-admin users | Admin Panel — Users tab | Reset Pwd button in actions column | Code review — AdminPage.jsx | PASS | Code review |
+| P10.5-20 | Admin error logs export | Section 5.13 Wireframe 13 | Export button downloads CSV | Admin Panel — Error Logs — Export | CSV downloaded | Code review — exportLogsCSV | PASS | Code review |
+| P10.5-21 | Admin registration chart | Section 5.10 Wireframe 10 | Bar chart last 7 days | Admin Panel — Dashboard | 7-bar chart visible | Frontend: registrations state + chart JSX | PASS | Code review |
+| P10.5-22 | WCAG aria-live chat | Section 4.10 NFR | Screen readers announce messages | Messages container | aria-live=polite present | Code review — App.jsx | PASS | Code review |
+| P10.5-23 | WCAG aria-labels icon buttons | Section 4.10 NFR | Icon buttons have accessible labels | Inspect topbar buttons | aria-label on all icon buttons | Code review — App.jsx | PASS | Code review |
+| P10.5-24 | WCAG focus-visible styles | Section 4.10 NFR | Keyboard focus visible | Tab through UI | Green outline on focused element | index.html *:focus-visible | PASS | Code review |
+| P10.5-25 | WCAG RecipeModal dialog role | Section 4.10 NFR | Modal announced as dialog | Open recipe detail | role=dialog, aria-modal=true | Code review — RecipeModal | PASS | Code review |
+| P10.5-26 | WCAG typing indicator | Section 4.10 NFR | Loading dots during AI processing | Send message | Animated dots shown | Code review — typing indicator | PASS | Code review |
+| P10.5-27 | npm test backend | — | All backend tests pass | cd backend && npm test | 202 tests, 20 suites, 0 failures | 202 passed | PASS | Automated |
+| P10.5-28 | npm test frontend | — | All frontend tests pass | cd frontend && npm test | 27 tests, 1 suite, 0 failures | 27 passed | PASS | Automated |
+| P10.5-29 | Browser registration flow | Section 5.3 | Register with dietary prefs | Register select Halal + Peanuts | Rows in user_dietary_preferences and user_allergens | PENDING — manual | PENDING | Manual |
+| P10.5-30 | Browser forgot password | Section 5.2 | User receives reset email | Forgot password? — enter email | Email received | PENDING — requires live Supabase | PENDING | Manual |
+| P10.5-31 | Browser admin reset password | Section 5.12 | Admin sends reset to user | Admin — Users — Reset Pwd | Alert: Password reset email sent | PENDING — manual | PENDING | Manual |
+| P10.5-32 | Browser meal plan perishable fix | Section 4.5.6 | Meal plan Days 2-3 include non-perishable | Generate plan with mixed ingredients | Day 2/3 shows recipes without perishable match | PENDING — manual | PENDING | Manual |

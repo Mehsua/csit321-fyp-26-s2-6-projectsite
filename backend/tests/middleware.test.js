@@ -124,3 +124,43 @@ describe('requireRole', () => {
     expect(res.status).toHaveBeenCalledWith(401);
   });
 });
+
+describe('authenticate — updates session last_activity', () => {
+  test('calls supabase update on sessions table after successful auth', async () => {
+    const mockUpdate = jest.fn().mockReturnThis();
+    const mockEq1 = jest.fn().mockReturnThis();
+    const mockEq2 = jest.fn().mockResolvedValue({ error: null });
+
+    supabaseAdmin.auth.getUser = jest.fn().mockResolvedValue({
+      data: { user: { id: 'user-uuid' } }, error: null,
+    });
+    supabaseAdmin.from = jest.fn().mockImplementation((table) => {
+      if (table === 'users') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          single: jest.fn().mockResolvedValue({
+            data: { user_id: 'user-uuid', email: 'a@b.com', name: 'A', role: 'registered', is_locked: false, lock_until: null, is_active: true },
+            error: null,
+          }),
+        };
+      }
+      if (table === 'sessions') {
+        return { update: mockUpdate, eq: mockEq1 };
+      }
+      return {};
+    });
+    mockEq1.mockImplementation(() => ({ eq: mockEq2 }));
+
+    const req = { headers: { authorization: 'Bearer test-token' } };
+    const res = {};
+    const next = jest.fn();
+    const authenticate = require('../src/middleware/authenticate');
+    await authenticate(req, res, next);
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      last_activity: expect.any(String),
+      expires_at: expect.any(String),
+    }));
+    expect(next).toHaveBeenCalled();
+  });
+});

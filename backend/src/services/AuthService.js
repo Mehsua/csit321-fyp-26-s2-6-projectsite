@@ -5,7 +5,7 @@ const LOCKOUT_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
 
 class AuthService {
-  async register({ email, password, name }) {
+  async register({ email, password, name, dietaryTags = [], allergens = [] }) {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -41,6 +41,24 @@ class AuthService {
     if (dbError) {
       await supabaseAdmin.auth.admin.deleteUser(authUserId).catch(() => {});
       throw Object.assign(new Error('Registration failed. Please try again.'), { status: 500 });
+    }
+
+    if (dietaryTags.length > 0) {
+      const { data: tags } = await supabaseAdmin
+        .from('dietary_tags').select('tag_id, name').in('name', dietaryTags);
+      if (tags?.length > 0) {
+        await supabaseAdmin.from('user_dietary_preferences')
+          .insert(tags.map(t => ({ user_id: authUserId, tag_id: t.tag_id })));
+      }
+    }
+
+    if (allergens.length > 0) {
+      const { data: allergenRows } = await supabaseAdmin
+        .from('allergens').select('allergen_id, name').in('name', allergens);
+      if (allergenRows?.length > 0) {
+        await supabaseAdmin.from('user_allergens')
+          .insert(allergenRows.map(a => ({ user_id: authUserId, allergen_id: a.allergen_id })));
+      }
     }
 
     return userRow;
@@ -133,6 +151,11 @@ class AuthService {
       throw Object.assign(new Error('User not found'), { status: 404 });
     }
     return data;
+  }
+
+  async forgotPassword(email) {
+    // Always resolves — do not reveal whether email is registered (security)
+    await supabaseAdmin.auth.resetPasswordForEmail(email).catch(() => {});
   }
 }
 

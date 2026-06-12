@@ -150,3 +150,21 @@ describe('GET /api/auth/me', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('POST /api/auth/forgot-password', () => {
+  test('returns 200 with confirmation message', async () => {
+    AuthService.forgotPassword = jest.fn().mockResolvedValue();
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'user@example.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/reset link/i);
+  });
+
+  test('returns 400 when email is missing', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({});
+    expect(res.status).toBe(400);
+  });
+});

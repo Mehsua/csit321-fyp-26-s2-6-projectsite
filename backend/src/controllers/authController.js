@@ -1,12 +1,16 @@
 const AuthService = require('../services/AuthService');
 
 async function register(req, res, next) {
-  const { email, password, name } = req.body;
+  const { email, password, name, dietaryTags, allergens } = req.body;
   if (!email || !password || !name) {
     return res.status(400).json({ error: 'email, password, and name are required' });
   }
   try {
-    const user = await AuthService.register({ email, password, name });
+    const user = await AuthService.register({
+      email, password, name,
+      dietaryTags: Array.isArray(dietaryTags) ? dietaryTags : [],
+      allergens: Array.isArray(allergens) ? allergens : [],
+    });
     res.status(201).json({ user });
   } catch (err) {
     if (err.status) return res.status(err.status).json({ error: err.message });
@@ -51,4 +55,13 @@ async function getMe(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, getMe };
+async function forgotPassword(req, res, next) {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'email is required' });
+  try {
+    await AuthService.forgotPassword(email);
+    res.json({ message: 'If that email is registered, a reset link has been sent.' });
+  } catch (err) { next(err); }
+}
+
+module.exports = { register, login, logout, getMe, forgotPassword };
