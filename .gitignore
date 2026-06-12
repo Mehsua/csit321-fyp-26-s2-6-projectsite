@@ -44,6 +44,6 @@ CLAUDE.md
 .claude/
 PROJECT_PROGRESS.md
 CODEBASE.md
-docs/plans/
-"docs/" 
-"supabase/" 
+docs/
+supabase/
+backend/test-output.txt

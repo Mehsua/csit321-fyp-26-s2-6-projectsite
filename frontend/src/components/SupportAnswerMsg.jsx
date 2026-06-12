@@ -52,7 +52,7 @@ export default function SupportAnswerMsg({ matched, question, answer, category, 
               <button style={linkBtn} onClick={onEscalate}>Contact support →</button>
             </>
           ) : (
-            <div style={confirmedStyle}>✓ Request submitted. Contact: {contactInfo}</div>
+            <div style={confirmedStyle}>✓ Request submitted. Contact: {contactInfo || 'support@foodbot.com'}</div>
           )}
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function SupportAnswerMsg({ matched, question, answer, category, 
       {!escalated ? (
         <button style={escalateBtn} onClick={onEscalate}>Contact Support</button>
       ) : (
-        <div style={confirmedStyle}>✓ Request submitted. Contact: {contactInfo}</div>
+        <div style={confirmedStyle}>✓ Request submitted. Contact: {contactInfo || 'support@foodbot.com'}</div>
       )}
     </div>
   );
