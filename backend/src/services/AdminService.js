@@ -237,6 +237,55 @@ class AdminService {
       .eq('recipe_id', recipeId);
     if (error) throw error;
   }
+
+  async listUsers({ search = '', role = '', status = '', page = 1, pageSize = 20 } = {}) {
+    let query = supabaseAdmin
+      .from('users')
+      .select('user_id, name, email, role, is_locked, is_active, fail_count, lock_until, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false });
+    if (search) query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+    if (role) query = query.eq('role', role);
+    if (status === 'locked') query = query.eq('is_locked', true);
+    if (status === 'inactive') query = query.eq('is_active', false);
+    if (status === 'active') query = query.eq('is_active', true).eq('is_locked', false);
+    const from = (page - 1) * pageSize;
+    query = query.range(from, from + pageSize - 1);
+    const { data, count, error } = await query;
+    if (error) throw error;
+    return { users: data ?? [], total: count ?? 0 };
+  }
+
+  async lockUser(userId) {
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update({ is_locked: true })
+      .eq('user_id', userId);
+    if (error) throw error;
+  }
+
+  async unlockUser(userId) {
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update({ is_locked: false, fail_count: 0, lock_until: null })
+      .eq('user_id', userId);
+    if (error) throw error;
+  }
+
+  async deactivateUser(userId) {
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update({ is_active: false })
+      .eq('user_id', userId);
+    if (error) throw error;
+  }
+
+  async reactivateUser(userId) {
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update({ is_active: true, is_locked: false, fail_count: 0, lock_until: null })
+      .eq('user_id', userId);
+    if (error) throw error;
+  }
 }
 
 module.exports = AdminService;

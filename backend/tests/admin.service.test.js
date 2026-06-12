@@ -168,3 +168,64 @@ describe('AdminService.deleteRecipe', () => {
     expect(updateChain.eq).toHaveBeenCalledWith('recipe_id', 'r-1');
   });
 });
+
+// ── listUsers ────────────────────────────────────────────────────────────────
+
+describe('AdminService.listUsers', () => {
+  test('returns paginated users with total count', async () => {
+    const rows = [{ user_id: 'u-1', name: 'John', email: 'john@example.com', role: 'registered', is_locked: false, is_active: true }];
+    supabaseAdmin.from = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      range: jest.fn().mockResolvedValue({ data: rows, count: 1, error: null }),
+    });
+    const svc = new AdminService();
+    const result = await svc.listUsers({});
+    expect(result.users).toHaveLength(1);
+    expect(result.total).toBe(1);
+  });
+});
+
+// ── lockUser / unlockUser ────────────────────────────────────────────────────
+
+describe('AdminService.lockUser', () => {
+  test('sets is_locked=true for a registered user', async () => {
+    const chain = { update: jest.fn().mockReturnThis(), eq: jest.fn().mockResolvedValue({ error: null }) };
+    supabaseAdmin.from = jest.fn().mockReturnValue(chain);
+    const svc = new AdminService();
+    await svc.lockUser('u-1');
+    expect(chain.update).toHaveBeenCalledWith({ is_locked: true });
+  });
+});
+
+describe('AdminService.unlockUser', () => {
+  test('resets is_locked, fail_count, and lock_until', async () => {
+    const chain = { update: jest.fn().mockReturnThis(), eq: jest.fn().mockResolvedValue({ error: null }) };
+    supabaseAdmin.from = jest.fn().mockReturnValue(chain);
+    const svc = new AdminService();
+    await svc.unlockUser('u-1');
+    expect(chain.update).toHaveBeenCalledWith({ is_locked: false, fail_count: 0, lock_until: null });
+  });
+});
+
+// ── deactivateUser / reactivateUser ──────────────────────────────────────────
+
+describe('AdminService.deactivateUser', () => {
+  test('sets is_active=false for a registered user', async () => {
+    const chain = { update: jest.fn().mockReturnThis(), eq: jest.fn().mockResolvedValue({ error: null }) };
+    supabaseAdmin.from = jest.fn().mockReturnValue(chain);
+    const svc = new AdminService();
+    await svc.deactivateUser('u-1');
+    expect(chain.update).toHaveBeenCalledWith({ is_active: false });
+  });
+});
+
+describe('AdminService.reactivateUser', () => {
+  test('sets is_active=true and resets lock state', async () => {
+    const chain = { update: jest.fn().mockReturnThis(), eq: jest.fn().mockResolvedValue({ error: null }) };
+    supabaseAdmin.from = jest.fn().mockReturnValue(chain);
+    const svc = new AdminService();
+    await svc.reactivateUser('u-1');
+    expect(chain.update).toHaveBeenCalledWith({ is_active: true, is_locked: false, fail_count: 0, lock_until: null });
+  });
+});
