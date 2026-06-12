@@ -113,11 +113,19 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
   const inst = instructions || {};
 
   return (
-    <div style={S.modalOverlay} onClick={onClose}>
-      <div style={{ ...S.modalCard, width: 520 }} onClick={e => e.stopPropagation()}>
+    <div style={S.modalOverlay} role="presentation" onClick={onClose}>
+      <div
+        style={{ ...S.modalCard, width: 520 }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="recipe-modal-title"
+        tabIndex={-1}
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
           <div>
-            <div style={S.modalTitle}>{recipe.name}</div>
+            <div id="recipe-modal-title" style={S.modalTitle}>{recipe.name}</div>
             <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
               {recipe.cookTime} min &nbsp;|&nbsp;
               <span style={S.badge(pct >= 70 ? "match" : pct >= 40 ? "warn" : "red")}>{pct}% match</span>
@@ -836,7 +844,7 @@ export default function App() {
             </span>
           </div>
         )}
-        <div style={S.messages}>
+        <div style={S.messages} aria-live="polite" aria-label="Chat messages">
           {messages.length === 0 && (
             <div style={{ textAlign: "center", padding: "60px 40px" }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🍳</div>
@@ -901,7 +909,13 @@ export default function App() {
           {loading && messages[messages.length - 1]?.role !== "assistant" && (
             <div style={S.msgWrap(false)}>
               <div style={S.avatar("#16a34a")}>FB</div>
-              <div style={{ ...S.bubble(false), color: "#999" }}>Thinking…</div>
+              <div style={{ ...S.bubble(false), color: "#999" }}>
+                <span aria-label="Loading response">
+                  <span className="dot">●</span>
+                  <span className="dot">●</span>
+                  <span className="dot">●</span>
+                </span>
+              </div>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -926,7 +940,7 @@ export default function App() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <button style={S.sendBtn} onClick={() => sendMessage()} aria-label="Send">
+            <button type="button" style={S.sendBtn} aria-label="Send message" onClick={() => sendMessage()}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 8L2 2l2.5 6L2 14l12-6z" fill="#fff" /></svg>
             </button>
           </div>
@@ -1179,21 +1193,23 @@ export default function App() {
           FoodBot
         </div>
         <div style={S.topRight}>
-          <button style={S.btn} title="Help / FAQ" onClick={() => setHelpOpen(true)}>❓</button>
+          <button style={S.btn} title="Help / FAQ" aria-label="Help and FAQ" onClick={() => setHelpOpen(true)}>❓</button>
           <button
             style={{ ...S.btn, color: page === 'shopping-list' ? '#16a34a' : '#555' }}
             title="Shopping List"
+            aria-label="Shopping list"
             onClick={() => setPage('shopping-list')}
           >
             🛒
           </button>
-          <button style={S.btn} title="Reset Chat" onClick={resetChat}>↺</button>
+          <button style={S.btn} title="Reset Chat" aria-label="Reset chat" onClick={resetChat}>↺</button>
           {user ? (
             <>
               {user.isAdmin && <button style={{ ...S.btn, color: page === "admin" ? "#16a34a" : "#555" }} onClick={() => setPage("admin")}>Admin</button>}
-              <button title="My Favourites" style={{ ...S.btn, color: page === "favourites" ? "#16a34a" : "#555" }} onClick={() => setPage("favourites")}>♡</button>
+              <button title="My Favourites" aria-label="My favourites" style={{ ...S.btn, color: page === "favourites" ? "#16a34a" : "#555" }} onClick={() => setPage("favourites")}>♡</button>
               <button
                 title="Meal Plan"
+                aria-label="Meal plan"
                 style={{ ...S.btn, color: page === 'meal-plan' ? '#16a34a' : '#555' }}
                 onClick={() => setPage('meal-plan')}
               >
@@ -1276,7 +1292,7 @@ export default function App() {
         )}
 
         {/* Main content */}
-        <div style={S.main}>
+        <div id="main-content" style={S.main}>
           {page === "chat" && renderChat()}
           {page === "login" && renderAuth(true)}
           {page === "register" && renderAuth(false)}
