@@ -157,7 +157,10 @@ describe('authenticate — updates session last_activity', () => {
     const next = jest.fn();
     const authenticate = require('../src/middleware/authenticate');
     await authenticate(req, res, next);
-    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ last_activity: expect.any(String) }));
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      last_activity: expect.any(String),
+      expires_at: expect.any(String),
+    }));
     expect(next).toHaveBeenCalled();
   });
 });
