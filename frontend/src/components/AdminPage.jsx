@@ -54,6 +54,7 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
   const [dashStats, setDashStats] = useState(null);
   const [recentRecipes, setRecentRecipes] = useState([]);
   const [recentErrors, setRecentErrors] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
   const [dashLoading, setDashLoading] = useState(false);
 
   const [recipes, setRecipes] = useState([]);
@@ -81,6 +82,8 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
       setDashStats({ totalRecipes: data.totalRecipes, registeredUsers: data.registeredUsers, activeSessions: data.activeSessions, unresolvedErrors: data.unresolvedErrors });
       setRecentRecipes(data.recentRecipes || []);
       setRecentErrors(data.recentErrors || []);
+      const regsRes = await api.get('/api/admin/stats/registrations').catch(() => ({ registrations: [] }));
+      setRegistrations(regsRes.registrations || []);
     } catch { /* ignore */ }
     finally { setDashLoading(false); }
   }, []);
@@ -111,7 +114,7 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
     setLogsLoading(true);
     try {
       const params = new URLSearchParams({ status: logFilter.status });
-      const data = await api.get(`/api/admin/error-logs?${params}`);
+      const data = await api.get(`/api/admin/logs?${params}`);
       setErrorLogs(data.logs || []);
       setLogTotal(data.total || 0);
     } catch { /* ignore */ }
@@ -164,19 +167,49 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
   }
 
   async function handleUserAction(userId, action) {
-    try { await api.put(`/api/admin/users/${userId}/${action}`); loadUsers(); }
+    try { await api.patch(`/api/admin/users/${userId}/${action}`); loadUsers(); }
     catch { /* ignore */ }
   }
 
+  async function handleResetPassword(userId) {
+    try {
+      await api.post(`/api/admin/users/${userId}/reset-password`);
+      alert('Password reset email sent.');
+    } catch (_) {
+      alert('Failed to send reset email.');
+    }
+  }
+
   async function handleResolveLog(logId) {
-    try { await api.put(`/api/admin/error-logs/${logId}/resolve`); loadErrorLogs(); }
+    try { await api.patch(`/api/admin/logs/${logId}`); loadErrorLogs(); }
     catch { /* ignore */ }
   }
 
   async function handleClearResolved() {
     if (!window.confirm('Delete all resolved error logs?')) return;
-    try { await api.delete('/api/admin/error-logs/resolved'); loadErrorLogs(); }
+    try { await api.delete('/api/admin/logs/resolved'); loadErrorLogs(); }
     catch { /* ignore */ }
+  }
+
+  function exportLogsCSV(logs) {
+    const header = 'Timestamp,Type,Message,Endpoint,User,Status\n';
+    const rows = logs.map(l =>
+      [
+        new Date(l.created_at).toLocaleString(),
+        l.error_type,
+        `"${(l.message || '').replace(/"/g, '""')}"`,
+        l.endpoint || '',
+        l.user_id || 'Guest',
+        l.is_resolved ? 'Resolved' : 'Open',
+      ].join(',')
+    ).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `error-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function openAddRecipe() {
@@ -263,6 +296,31 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
             <div style={{ textAlign: 'right', marginTop: 6 }}>
               <span style={{ fontSize: 12, color: '#2563eb', cursor: 'pointer' }} onClick={() => setSection('error-logs')}>View All Logs ›</span>
             </div>
+          </div>
+        </div>
+
+        {/* User Registrations — Last 7 Days (wireframe 10) */}
+        <div style={{ marginTop: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>User Registrations — Last 7 Days</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 120, padding: '0 4px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8 }}>
+            {registrations.map(r => {
+              const max = Math.max(...registrations.map(x => x.count), 1);
+              const pct = Math.round((r.count / max) * 100);
+              return (
+                <div key={r.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 24, position: 'relative', height: '100%' }}>
+                  <div style={{ fontSize: 10, color: '#555', marginBottom: 2 }}>{r.count}</div>
+                  <div style={{ width: '60%', background: '#16a34a', borderRadius: '2px 2px 0 0', height: `${pct}%`, minHeight: r.count > 0 ? 4 : 0 }} />
+                  <div style={{ position: 'absolute', bottom: 4, fontSize: 9, color: '#888', textAlign: 'center' }}>
+                    {r.date.slice(5)}
+                  </div>
+                </div>
+              );
+            })}
+            {registrations.length === 0 && (
+              <div style={{ flex: 1, textAlign: 'center', color: '#aaa', fontSize: 12, alignSelf: 'center' }}>
+                [Bar Chart Placeholder — User Registrations per Day]
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -356,6 +414,11 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
                               {isInactive
                                 ? <button style={S.btnSm('#16a34a')} onClick={() => handleUserAction(u.user_id, 'reactivate')}>Reactivate</button>
                                 : <button style={S.btnSm('#dc2626')} onClick={() => handleUserAction(u.user_id, 'deactivate')}>Deactivate</button>}
+                              <button style={S.btnSm('#2563eb')}
+                                onClick={() => handleResetPassword(u.user_id)}
+                                title="Send password reset email">
+                                Reset Pwd
+                              </button>
                             </>
                           )}
                         </td>
@@ -379,6 +442,7 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={S.pageTitle}>Error Logs</div>
           <div>
+            <button style={S.btn} onClick={() => exportLogsCSV(errorLogs)}>↓ Export</button>
             <button style={S.btn} onClick={handleClearResolved}>Clear Resolved</button>
           </div>
         </div>
