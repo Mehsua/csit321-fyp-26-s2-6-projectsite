@@ -3,10 +3,10 @@ const { supabaseAdmin } = require('../db/supabase');
 class AdminService {
   async getDashboardStats() {
     const [recipesRes, usersRes, sessionsRes, errorsRes] = await Promise.all([
-      supabaseAdmin.from('recipes').select().eq('is_active', true).gt('created_at', '2000-01-01'),
-      supabaseAdmin.from('users').select().eq('role', 'registered').eq('is_active', true).gt('created_at', '2000-01-01'),
-      supabaseAdmin.from('sessions').select().eq('is_active', true).gt('expires_at', new Date().toISOString()),
-      supabaseAdmin.from('error_logs').select().eq('is_resolved', false).gt('created_at', '2000-01-01'),
+      supabaseAdmin.from('recipes').select('*', { count: 'exact', head: true }).eq('is_active', true),
+      supabaseAdmin.from('users').select('*', { count: 'exact', head: true }).eq('role', 'registered').eq('is_active', true),
+      supabaseAdmin.from('sessions').select('*', { count: 'exact', head: true }).gt('expires_at', new Date().toISOString()),
+      supabaseAdmin.from('error_logs').select('*', { count: 'exact', head: true }).eq('is_resolved', false),
     ]);
     if (recipesRes.error) throw recipesRes.error;
     if (usersRes.error) throw usersRes.error;

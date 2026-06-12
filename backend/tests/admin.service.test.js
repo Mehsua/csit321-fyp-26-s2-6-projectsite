@@ -11,12 +11,14 @@ describe('AdminService.getDashboardStats', () => {
     let callCount = 0;
     supabaseAdmin.from = jest.fn().mockImplementation(() => {
       callCount++;
-      const counts = [10, 5, 3, 2];
-      return {
+      const count = [10, 5, 3, 2][callCount - 1];
+      const chain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        gt: jest.fn().mockResolvedValue({ count: counts[callCount - 1], error: null }),
+        gt: jest.fn().mockReturnThis(),
       };
+      chain.then = (resolve, reject) => Promise.resolve({ count, error: null }).then(resolve, reject);
+      return chain;
     });
     const svc = new AdminService();
     const stats = await svc.getDashboardStats();
@@ -30,7 +32,8 @@ describe('AdminService.getDashboardStats', () => {
     supabaseAdmin.from = jest.fn().mockReturnValue({
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      gt: jest.fn().mockResolvedValue({ count: null, error: { message: 'DB error' } }),
+      gt: jest.fn().mockReturnThis(),
+      then: (resolve, reject) => Promise.resolve({ count: null, error: { message: 'DB error' } }).then(resolve, reject),
     });
     const svc = new AdminService();
     await expect(svc.getDashboardStats()).rejects.toBeDefined();
