@@ -11,6 +11,7 @@ vi.mock('./lib/api', () => ({
 import App from './App';
 import { api } from './lib/api';
 import MealPlanPage from './components/MealPlanPage';
+import SupportAnswerMsg from './components/SupportAnswerMsg';
 
 const mockRecipe = {
   recipe_id: '1',
@@ -534,5 +535,35 @@ describe('MealPlanPage', () => {
     );
     expect(screen.getByText('Lemon Garlic Chicken')).toBeInTheDocument();
     cleanup();
+  });
+});
+
+describe('SupportAnswerMsg', () => {
+  test('shows question and answer when matched is true', () => {
+    render(
+      <SupportAnswerMsg
+        matched={true}
+        question="How do I add ingredients?"
+        answer="Type your ingredients in the chat."
+        category="Usage"
+        escalated={false}
+        onEscalate={() => {}}
+      />
+    );
+    expect(screen.getByText('How do I add ingredients?')).toBeInTheDocument();
+    expect(screen.getByText('Type your ingredients in the chat.')).toBeInTheDocument();
+    expect(screen.getByText(/contact support/i)).toBeInTheDocument();
+  });
+
+  test('shows escalation prompt when matched is false', () => {
+    render(
+      <SupportAnswerMsg
+        matched={false}
+        escalated={false}
+        onEscalate={() => {}}
+      />
+    );
+    expect(screen.getByText(/couldn't find/i)).toBeInTheDocument();
+    expect(screen.getByText(/contact support/i)).toBeInTheDocument();
   });
 });
