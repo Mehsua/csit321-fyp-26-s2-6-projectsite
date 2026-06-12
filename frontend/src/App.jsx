@@ -266,6 +266,9 @@ export default function App() {
   const [favourites, setFavourites] = useState([]);
   const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
   const [authError, setAuthError] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [regDietaryTags, setRegDietaryTags] = useState([]);
+  const [regAllergens, setRegAllergens] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [prefs, setPrefs] = useState({ halal: false, vegetarian: false, vegan: false, glutenFree: false, allergens: [] });
   const [recipeInstructions, setRecipeInstructions] = useState({});
@@ -646,21 +649,30 @@ export default function App() {
 
   async function handleRegister(e) {
     e.preventDefault();
-    setAuthError("");
+    setAuthError('');
     if (!authForm.name || !authForm.email || authForm.password.length < 8) {
-      setAuthError("Please fill all fields. Password must be at least 8 characters.");
+      setAuthError('Please fill all fields. Password must be at least 8 characters.');
+      return;
+    }
+    if (authForm.password !== confirmPassword) {
+      setAuthError('Passwords do not match.');
       return;
     }
     try {
-      await api.post("/api/auth/register", {
+      await api.post('/api/auth/register', {
         email: authForm.email,
         password: authForm.password,
         name: authForm.name,
+        dietaryTags: regDietaryTags,
+        allergens: regAllergens,
       });
-      setPage("login");
-      setAuthError("");
+      setPage('login');
+      setAuthError('');
+      setConfirmPassword('');
+      setRegDietaryTags([]);
+      setRegAllergens([]);
     } catch (err) {
-      setAuthError(err.message || "Registration failed. Please try again.");
+      setAuthError(err.message || 'Registration failed. Please try again.');
     }
   }
 
@@ -1057,20 +1069,69 @@ export default function App() {
           </div>
           {authError && <div style={{ background: "#fef2f2", color: "#dc2626", padding: "8px 12px", borderRadius: 8, fontSize: 13, marginBottom: 12 }}>{authError}</div>}
           <form onSubmit={isLogin ? handleLogin : handleRegister}>
-            {!isLogin && (
-              <div style={S.formGroup}>
-                <label style={S.label}>Name</label>
-                <input style={S.input} placeholder="Your name" value={authForm.name} onChange={e => setAuthForm(p => ({ ...p, name: e.target.value }))} />
-              </div>
+            {isLogin ? (
+              <>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Email</label>
+                  <input style={S.input} type="email" placeholder="you@email.com" value={authForm.email} onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))} />
+                </div>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Password</label>
+                  <input style={S.input} type="password" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Full Name</label>
+                  <input style={S.input} placeholder="e.g. John Smith" value={authForm.name}
+                    onChange={e => setAuthForm(p => ({ ...p, name: e.target.value }))} />
+                </div>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Email Address</label>
+                  <input style={S.input} type="email" placeholder="you@example.com" value={authForm.email}
+                    onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))} />
+                </div>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Password <span style={{ fontWeight: 400, color: '#888' }}>(min. 8 characters)</span></label>
+                  <input style={S.input} type="password" placeholder="••••••••" value={authForm.password}
+                    onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
+                </div>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Confirm Password</label>
+                  <input style={S.input} type="password" placeholder="Re-enter password" value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)} />
+                </div>
+                <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '16px 0' }} />
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Dietary Preferences <span style={{ fontWeight: 400, color: '#888' }}>(Optional)</span></div>
+                {['Halal', 'Vegan', 'Vegetarian', 'Gluten-Free'].map(tag => (
+                  <div key={tag} style={S.checkRow}>
+                    <div style={S.checkBox(regDietaryTags.includes(tag))}
+                      onClick={() => setRegDietaryTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}>
+                      {regDietaryTags.includes(tag) && <span style={{ color: '#fff', fontSize: 12 }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: 13 }}>{tag}</span>
+                  </div>
+                ))}
+                <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '16px 0' }} />
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Allergen Alerts <span style={{ fontWeight: 400, color: '#888' }}>(Optional)</span></div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 0' }}>
+                  {['Peanuts', 'Dairy', 'Gluten', 'Shellfish', 'Eggs', 'Soy'].map(allergen => (
+                    <div key={allergen} style={{ ...S.checkRow, minWidth: '50%' }}>
+                      <div style={S.checkBox(regAllergens.includes(allergen))}
+                        onClick={() => setRegAllergens(prev => prev.includes(allergen) ? prev.filter(a => a !== allergen) : [...prev, allergen])}>
+                        {regAllergens.includes(allergen) && <span style={{ color: '#fff', fontSize: 12 }}>✓</span>}
+                      </div>
+                      <span style={{ fontSize: 13 }}>{allergen}</span>
+                    </div>
+                  ))}
+                </div>
+                <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '16px 0' }} />
+                <div style={{ fontSize: 11, color: '#777', marginBottom: 16, lineHeight: 1.6 }}>
+                  By creating an account you agree to our Terms of Service and Privacy Policy. Your personal data is handled in compliance with <strong>PDPA (Singapore)</strong>.
+                </div>
+              </>
             )}
-            <div style={S.formGroup}>
-              <label style={S.label}>Email</label>
-              <input style={S.input} type="email" placeholder="you@email.com" value={authForm.email} onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))} />
-            </div>
-            <div style={S.formGroup}>
-              <label style={S.label}>Password</label>
-              <input style={S.input} type="password" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
-            </div>
             <button type="submit" style={S.formBtn}>{isLogin ? "Sign in" : "Create account"}</button>
           </form>
           <div style={S.formLink} onClick={() => { setPage(isLogin ? "register" : "login"); setAuthError(""); }}>
