@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FoodBot — Cook What You Have</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --forest: #0f3d2e;
+      --herb: #16a34a;
+      --herb-light: #22c55e;
+      --cream: #f7f3ec;
+      --sage: #e8f2eb;
+      --ink: #1a1a1a;
+      --muted: #5a6a61;
+      --border: #d4e2d8;
+      --white: #ffffff;
+      --radius: 16px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; background: var(--cream); color: var(--ink); overflow-x: hidden; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 68px;
+      background: rgba(247, 243, 236, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--forest);
+      text-decoration: none;
+    }
+    .nav-logo-icon {
+      width: 36px; height: 36px; background: var(--forest); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; color: var(--white);
+      letter-spacing: -0.5px;
+    }
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+    .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--forest); }
+    .btn-nav {
+      padding: 9px 22px; border-radius: 8px; border: none;
+      background: var(--forest); color: var(--white);
+      font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
+      cursor: pointer; text-decoration: none; transition: background 0.2s, transform 0.1s;
+    }
+    .btn-nav:hover { background: #0a2e22; transform: translateY(-1px); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden; padding-top: 68px;
+      background: var(--forest);
+    }
+
+    /* Floating ingredient words */
+    .ingredient-cloud {
+      position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+    }
+    .ingredient-word {
+      position: absolute;
+      font-family: 'Playfair Display', serif;
+      color: rgba(255,255,255,0.055);
+      font-style: italic;
+      white-space: nowrap;
+      animation: drift linear infinite;
+      user-select: none;
+    }
+    @keyframes drift {
+      0%   { transform: translateY(0px) rotate(var(--rot)); opacity: 0; }
+      8%   { opacity: 1; }
+      92%  { opacity: 1; }
+      100% { transform: translateY(-110vh) rotate(var(--rot)); opacity: 0; }
+    }
+
+    .hero-inner {
+      position: relative; z-index: 2; text-align: center;
+      padding: 80px 24px 100px;
+      max-width: 780px; margin: 0 auto;
+    }
+    .hero-eyebrow {
+      display: inline-block; margin-bottom: 28px;
+      padding: 6px 16px; border-radius: 20px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--herb-light);
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(42px, 7vw, 78px);
+      font-weight: 700; line-height: 1.07;
+      color: var(--white); margin-bottom: 28px;
+    }
+    .hero h1 em { font-style: italic; color: var(--herb-light); }
+    .hero-sub {
+      font-size: 18px; line-height: 1.7; color: rgba(255,255,255,0.68);
+      max-width: 520px; margin: 0 auto 44px; font-weight: 300;
+    }
+    .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      padding: 15px 34px; border-radius: 10px; border: none;
+      background: var(--herb); color: var(--white);
+      font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600;
+      cursor: pointer; text-decoration: none; transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(22, 163, 74, 0.45);
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary:hover { background: #15803d; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(22, 163, 74, 0.5); }
+    .btn-secondary {
+      padding: 15px 34px; border-radius: 10px;
+      border: 1.5px solid rgba(255,255,255,0.25); background: transparent;
+      color: rgba(255,255,255,0.85);
+      font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 500;
+      cursor: pointer; text-decoration: none; transition: border-color 0.2s, background 0.2s;
+    }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.07); }
+
+    /* Chat preview mockup */
+    .hero-mockup {
+      position: relative; z-index: 2;
+      width: 100%; max-width: 700px; margin: 60px auto 0;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px; padding: 20px; backdrop-filter: blur(8px);
+    }
+    .mockup-bar {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: #28c840; }
+    .mockup-title { margin-left: 8px; font-size: 13px; color: rgba(255,255,255,0.5); font-weight: 500; }
+    .chat-line { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+    .chat-line.user { flex-direction: row-reverse; }
+    .chat-avatar {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+    }
+    .av-bot { background: var(--herb); color: #fff; }
+    .av-user { background: #2563eb; color: #fff; }
+    .chat-bubble {
+      max-width: 78%; padding: 10px 14px; border-radius: 12px;
+      font-size: 13px; line-height: 1.55; color: rgba(255,255,255,0.88);
+    }
+    .bubble-bot { background: rgba(255,255,255,0.1); }
+    .bubble-user { background: rgba(22, 163, 74, 0.6); }
+    .recipe-pill {
+      display: inline-block; padding: 4px 10px; border-radius: 20px;
+      background: rgba(22, 163, 74, 0.25); border: 1px solid rgba(22, 163, 74, 0.4);
+      font-size: 11px; color: var(--herb-light); margin: 3px 3px 0 0;
+    }
+    .chat-input-mock {
+      display: flex; gap: 10px; align-items: center; margin-top: 14px;
+      padding: 10px 14px; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+    }
+    .chat-input-mock span { flex: 1; font-size: 13px; color: rgba(255,255,255,0.3); }
+    .send-btn-mock {
+      width: 32px; height: 32px; border-radius: 50%; background: var(--herb);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── WAVE ── */
+    .wave-divider { display: block; width: 100%; line-height: 0; }
+
+    /* ── STATS STRIP ── */
+    .stats-strip {
+      background: var(--white); border-bottom: 1px solid var(--border);
+      padding: 32px 48px;
+      display: flex; justify-content: center; gap: 60px; flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 700; color: var(--forest); line-height: 1; }
+    .stat-label { font-size: 13px; color: var(--muted); margin-top: 4px; font-weight: 500; }
+
+    /* ── FEATURES ── */
+    .section { padding: 96px 48px; }
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--herb); margin-bottom: 12px;
+    }
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(30px, 4vw, 46px); font-weight: 700;
+      color: var(--forest); line-height: 1.18; max-width: 520px;
+    }
+    .section-sub { font-size: 17px; color: var(--muted); line-height: 1.7; margin-top: 16px; max-width: 480px; font-weight: 300; }
+
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px; margin-top: 56px;
+    }
+    .feature-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(15,61,46,0.1); }
+    .feature-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 20px;
+    }
+    .fi-green { background: var(--sage); }
+    .fi-yellow { background: #fefce8; }
+    .fi-blue { background: #eff6ff; }
+    .feature-card h3 { font-size: 18px; font-weight: 600; color: var(--forest); margin-bottom: 10px; }
+    .feature-card p { font-size: 14px; line-height: 1.65; color: var(--muted); }
+
+    /* ── HOW IT WORKS ── */
+    .how-section { background: var(--forest); padding: 96px 48px; }
+    .how-section .section-label { color: var(--herb-light); }
+    .how-section .section-title { color: var(--white); }
+    .how-section .section-sub { color: rgba(255,255,255,0.6); }
+
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0; margin-top: 64px; position: relative; }
+    .step { padding: 0 32px; position: relative; }
+    .step:not(:last-child)::after {
+      content: ''; position: absolute; right: -1px; top: 28px;
+      width: 1px; height: 60px; background: rgba(255,255,255,0.12);
+    }
+    .step-num {
+      font-family: 'Playfair Display', serif; font-size: 60px; font-weight: 700;
+      color: rgba(255,255,255,0.08); line-height: 1; margin-bottom: 8px; display: block;
+    }
+    .step-title { font-size: 16px; font-weight: 600; color: var(--white); margin-bottom: 8px; }
+    .step-desc { font-size: 14px; line-height: 1.65; color: rgba(255,255,255,0.55); }
+
+    /* ── DIETARY SECTION ── */
+    .dietary-section { background: var(--sage); padding: 80px 48px; text-align: center; }
+    .dietary-section .section-title { margin: 0 auto 12px; text-align: center; }
+    .dietary-section .section-sub { margin: 0 auto 40px; text-align: center; }
+    .diet-pills { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .diet-pill {
+      padding: 10px 22px; border-radius: 40px; font-size: 14px; font-weight: 500;
+      background: var(--white); color: var(--forest); border: 1.5px solid var(--border);
+      transition: all 0.2s;
+    }
+    .diet-pill:hover { background: var(--forest); color: var(--white); border-color: var(--forest); }
+    .diet-pill span { margin-right: 6px; }
+
+    /* ── CTA ── */
+    .cta-section {
+      background: var(--cream); padding: 100px 48px; text-align: center;
+    }
+    .cta-section .section-title { margin: 0 auto 16px; text-align: center; }
+    .cta-section .section-sub { margin: 0 auto 44px; text-align: center; }
+    .cta-box {
+      background: var(--forest); border-radius: 24px; padding: 64px 48px;
+      max-width: 760px; margin: 0 auto;
+    }
+    .cta-box h2 { font-family: 'Playfair Display', serif; font-size: 38px; color: var(--white); margin-bottom: 14px; }
+    .cta-box p { font-size: 16px; color: rgba(255,255,255,0.6); margin-bottom: 36px; max-width: 480px; margin-left: auto; margin-right: auto; }
+    .cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--ink); padding: 48px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;
+    }
+    .footer-logo { font-family: 'Playfair Display', serif; font-size: 18px; color: rgba(255,255,255,0.4); }
+    .footer-note { font-size: 12px; color: rgba(255,255,255,0.25); }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { font-size: 13px; color: rgba(255,255,255,0.35); text-decoration: none; }
+    .footer-links a:hover { color: rgba(255,255,255,0.7); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .section, .how-section, .cta-section { padding: 64px 24px; }
+      .stats-strip { padding: 28px 24px; gap: 32px; }
+      .step:not(:last-child)::after { display: none; }
+      .step { padding: 0 0 32px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+      .step:last-child { padding-bottom: 0; border-bottom: none; }
+      .cta-box { padding: 40px 28px; }
+      footer { padding: 32px 24px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ingredient-word { animation: none; }
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-icon">FB</div>
+    FoodBot
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="#dietary">Dietary options</a>
+  </div>
+  <a class="btn-nav" href="#chatbot">Open FoodBot →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="ingredient-cloud" id="cloud"></div>
+
+  <div style="width:100%; max-width:900px; margin:0 auto; padding:0 24px; display:flex; flex-direction:column; align-items:center;">
+    <div class="hero-inner">
+      <div class="hero-eyebrow">AI-powered recipe discovery</div>
+      <h1>Cook what<br><em>you already have</em></h1>
+      <p class="hero-sub">Tell FoodBot what's in your fridge. It matches your ingredients to recipes instantly — with dietary filters, nutrition info, and step-by-step instructions.</p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="#chatbot">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 2h12v9H9l-3 3v-3H2V2z" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          Start cooking
+        </a>
+        <a class="btn-secondary" href="#how">See how it works</a>
+      </div>
+    </div>
+
+    <!-- Chat mockup -->
+    <div class="hero-mockup">
+      <div class="mockup-bar">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+        <span class="mockup-title">FoodBot — chat</span>
+      </div>
+
+      <div class="chat-line">
+        <div class="chat-avatar av-bot">FB</div>
+        <div class="chat-bubble bubble-bot">Hi! Tell me what ingredients you have on hand and I'll find recipes that match.</div>
+      </div>
+
+      <div class="chat-line user">
+        <div class="chat-avatar av-user">Y</div>
+        <div class="chat-bubble bubble-user">I have chicken, garlic, lemon, and some thyme</div>
+      </div>
+
+      <div class="chat-line">
+        <div class="chat-avatar av-bot">FB</div>
+        <div class="chat-bubble bubble-bot">
+          Found 4 recipes matching your ingredients 🎉<br><br>
+          <span class="recipe-pill">Lemon Herb Chicken</span>
+          <span class="recipe-pill">Garlic Roast</span>
+          <span class="recipe-pill">Chicken Piccata</span>
+          <span class="recipe-pill">Thyme Skillet</span>
+        </div>
+      </div>
+
+      <div class="chat-input-mock">
+        <span>Ask a follow-up or list more ingredients…</span>
+        <div class="send-btn-mock">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M14 8L2 2l2.5 6L2 14l12-6z" fill="#fff"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-strip">
+  <div class="stat">
+    <div class="stat-num">500+</div>
+    <div class="stat-label">Recipes in database</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">4</div>
+    <div class="stat-label">Dietary filter modes</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">7</div>
+    <div class="stat-label">Allergen alerts</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">100%</div>
+    <div class="stat-label">Free to use</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="section" id="features" style="background:var(--white);">
+  <div style="max-width:1100px; margin:0 auto;">
+    <div class="section-label">What FoodBot does</div>
+    <h2 class="section-title">More than a recipe search</h2>
+    <p class="section-sub">FoodBot understands what you're working with — not just keywords, but ingredients, gaps, and dietary needs.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon fi-green">🥦</div>
+        <h3>Ingredient matching</h3>
+        <p>Type what's in your kitchen in plain language. FoodBot extracts the ingredients, confirms them, and finds recipes ranked by how well they match what you have.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-yellow">🧮</div>
+        <h3>Nutrition at a glance</h3>
+        <p>Every recipe card surfaces calories, protein, carbs and fats — so you can cook with your health goals in mind without switching apps.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-blue">💬</div>
+        <h3>Conversational cooking</h3>
+        <p>Ask follow-ups, swap ingredients, request simpler versions, or find pairings — all in the same chat thread. No forms. No filters to navigate.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-green">❤️</div>
+        <h3>Favourites & history</h3>
+        <p>Save up to 50 recipes to your personal favourites. Your dietary preferences and allergen settings are remembered across sessions.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-yellow">⚠️</div>
+        <h3>Allergen warnings</h3>
+        <p>Set your allergen profile once. FoodBot flags recipes containing peanuts, shellfish, dairy, gluten, and more — before you ask.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-blue">📖</div>
+        <h3>Step-by-step instructions</h3>
+        <p>Tap any recipe to load full cooking steps with a missing ingredient checklist — so you know exactly what to pick up before you start.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div style="max-width:1100px; margin:0 auto;">
+    <div class="section-label">The process</div>
+    <h2 class="section-title" style="color:var(--white);">From fridge to table in four steps</h2>
+    <p class="section-sub">No recipe books. No subscriptions to browse. Just describe what you have.</p>
+
+    <div class="steps">
+      <div class="step">
+        <span class="step-num">01</span>
+        <div class="step-title">Describe your ingredients</div>
+        <p class="step-desc">Type naturally: "I've got chicken, garlic, and a lemon." FoodBot extracts the list for you.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">02</span>
+        <div class="step-title">Confirm or edit</div>
+        <p class="step-desc">Review the extracted ingredients, remove anything wrong, add what was missed — then confirm.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">03</span>
+        <div class="step-title">Browse matched recipes</div>
+        <p class="step-desc">See recipes ranked by match score. Allergen warnings and dietary badges are shown upfront.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">04</span>
+        <div class="step-title">Cook with confidence</div>
+        <p class="step-desc">Open any recipe for full instructions, nutrition info, and a checklist of what you're missing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DIETARY -->
+<section class="dietary-section" id="dietary">
+  <div style="max-width:700px; margin:0 auto;">
+    <div class="section-label" style="text-align:center;">Filters that stick</div>
+    <h2 class="section-title">Your preferences, remembered</h2>
+    <p class="section-sub">Set dietary modes in your profile — FoodBot applies them automatically to every search.</p>
+    <div class="diet-pills">
+      <div class="diet-pill"><span>🌿</span>Vegetarian</div>
+      <div class="diet-pill"><span>🌱</span>Vegan</div>
+      <div class="diet-pill"><span>☪️</span>Halal</div>
+      <div class="diet-pill"><span>🌾</span>Gluten-free</div>
+      <div class="diet-pill"><span>🥜</span>Peanut-free</div>
+      <div class="diet-pill"><span>🦐</span>Shellfish-free</div>
+      <div class="diet-pill"><span>🥛</span>Dairy-free</div>
+      <div class="diet-pill"><span>🥚</span>Egg-free</div>
+      <div class="diet-pill"><span>🐟</span>Fish-free</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="chatbot">
+  <div class="cta-box">
+    <h2>What's in your kitchen right now?</h2>
+    <p>Open FoodBot and start a conversation. No account required to try it.</p>
+    <div class="cta-actions">
+      <a class="btn-primary" href="./chatbot.html" target="_blank" rel="noopener" style="font-size:16px; padding:16px 38px;">
+        Open FoodBot
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M8 3l5 5-5 5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a class="btn-secondary" href="" target="_blank" rel="noopener" style="border-color:rgba(255,255,255,0.25); color:rgba(255,255,255,0.75);">
+        Sign up free
+      </a>
+    </div>
+    <p style="margin-top:20px; font-size:12px; color:rgba(255,255,255,0.3);">Guest access available — no email required</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">FoodBot</div>
+  <div class="footer-links">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="http://localhost:5173" target="_blank">Launch app</a>
+  </div>
+  <div class="footer-note">FYP · CSIT321 · UOW</div>
+</footer>
+
+<script>
+  // ── Ingredient cloud ──
+  const WORDS = [
+    'chicken','garlic','lemon','butter','onion','tomato','pasta','rice','eggs',
+    'basil','thyme','parsley','ginger','olive oil','salmon','broccoli','spinach',
+    'cheddar','cream','mushroom','carrot','potato','chilli','soy sauce','tofu',
+    'aubergine','courgette','peppers','coriander','cumin','paprika','flour','sugar',
+    'yoghurt','mozzarella','anchovies','capers','chorizo','bacon','beef','pork',
+  ];
+
+  const cloud = document.getElementById('cloud');
+  const W = WORDS.length;
+
+  function spawnWord() {
+    const el = document.createElement('span');
+    el.className = 'ingredient-word';
+    const word = WORDS[Math.floor(Math.random() * W)];
+    const size = 14 + Math.random() * 38;
+    const xPct = 2 + Math.random() * 94;
+    const rot = (Math.random() - 0.5) * 18;
+    const dur = 18 + Math.random() * 22;
+    const delay = Math.random() * -dur;
+
+    el.textContent = word;
+    el.style.cssText = `
+      left:${xPct}%; bottom:-60px;
+      font-size:${size}px;
+      --rot:${rot}deg;
+      animation-duration:${dur}s;
+      animation-delay:${delay}s;
+    `;
+    cloud.appendChild(el);
+
+    setTimeout(() => el.remove(), (dur + Math.abs(delay)) * 1000 + 2000);
+  }
+
+  // Seed initial words
+  for (let i = 0; i < 28; i++) spawnWord();
+  setInterval(spawnWord, 900);
+
+  // ── Smooth CTA scroll ──
+  document.querySelectorAll('a[href^="#"]').forEach(link => {
+    link.addEventListener('click', e => {
+      const target = document.querySelector(link.getAttribute('href'));
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+    });
+  });
+</script>
+</body>
+</html>
