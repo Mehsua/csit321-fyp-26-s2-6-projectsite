@@ -4,6 +4,7 @@ import IngredientConfirmMsg from './components/IngredientConfirmMsg';
 import SupportAnswerMsg from './components/SupportAnswerMsg';
 import ShoppingListPage from './components/ShoppingListPage';
 import MealPlanPage from './components/MealPlanPage';
+import AdminPage from './components/AdminPage';
 
 // ─── Recipe Adapter ────────────────────────────────────────────────────────────
 function adaptRecipe(r) {
@@ -267,9 +268,6 @@ export default function App() {
   const [authError, setAuthError] = useState("");
   const [sessionId, setSessionId] = useState(null);
   const [prefs, setPrefs] = useState({ halal: false, vegetarian: false, vegan: false, glutenFree: false, allergens: [] });
-  const [adminRecipes, setAdminRecipes] = useState([]);
-  const [editRecipe, setEditRecipe] = useState(null);
-  const [adminTab, setAdminTab] = useState("recipes");
   const [recipeInstructions, setRecipeInstructions] = useState({});
   const [helpOpen, setHelpOpen] = useState(false);
   const [savePrefsStatus, setSavePrefsStatus] = useState(null);
@@ -999,79 +997,6 @@ export default function App() {
     );
   }
 
-  function renderAdmin() {
-    return (
-      <div style={S.adminPage}>
-        <div style={S.adminHeader}>
-          <div style={{ fontSize: 20, fontWeight: 600 }}>Admin panel</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {["recipes", "users"].map(t => (
-              <button key={t} style={{ ...S.btn, background: adminTab === t ? "#f0fdf4" : "#fff", color: adminTab === t ? "#16a34a" : "#555", borderColor: adminTab === t ? "#bbf7d0" : "#e5e5e5" }} onClick={() => setAdminTab(t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
-            ))}
-          </div>
-        </div>
-
-        {adminTab === "recipes" && (
-          <>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-              <button style={S.btnPrimary} onClick={() => setEditRecipe({ id: Date.now(), name: "", cuisine: "", ingredients: [], dietary: [], allergens: [], prepTime: 0, cookTime: 0, instructions: "", calories: 0 })}>+ Add recipe</button>
-            </div>
-            <table style={S.table}>
-              <thead>
-                <tr>
-                  {["Name", "Cuisine", "Ingredients", "Dietary", "Allergens", "Actions"].map(h => <th key={h} style={S.th}>{h}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {adminRecipes.map(r => (
-                  <tr key={r.id}>
-                    <td style={{ ...S.td, fontWeight: 500 }}>{r.name}</td>
-                    <td style={S.td}>{r.cuisine}</td>
-                    <td style={S.td}><div style={{ fontSize: 12, color: "#666" }}>{r.ingredients.slice(0, 3).join(", ")}{r.ingredients.length > 3 ? "…" : ""}</div></td>
-                    <td style={S.td}>{r.dietary.map(d => <span key={d} style={{ ...S.badge("match"), marginRight: 4 }}>{d}</span>)}</td>
-                    <td style={S.td}>{r.allergens.length === 0 ? <span style={{ color: "#999", fontSize: 12 }}>None</span> : r.allergens.map(a => <span key={a} style={{ ...S.badge("red"), marginRight: 4 }}>{a}</span>)}</td>
-                    <td style={S.td}>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button style={S.recipeBtn} onClick={() => setViewRecipe(r)}>View</button>
-                        <button style={S.recipeBtn} onClick={() => setEditRecipe(r)}>Edit</button>
-                        <button style={S.btnDanger} onClick={() => setAdminRecipes(prev => prev.filter(x => x.id !== r.id))}>Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
-        )}
-
-        {adminTab === "users" && (
-          <table style={S.table}>
-            <thead>
-              <tr>{["Name", "Email", "Role", "Sessions"].map(h => <th key={h} style={S.th}>{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {user?.isAdmin && (
-                <tr>
-                  <td style={S.td}>{user.name}</td>
-                  <td style={S.td}>{user.email}</td>
-                  <td style={S.td}><span style={S.badge("info")}>admin</span></td>
-                  <td style={S.td}>—</td>
-                </tr>
-              )}
-              {user && !user.isAdmin && (
-                <tr>
-                  <td style={S.td}>{user.name}</td>
-                  <td style={S.td}>{user.email}</td>
-                  <td style={S.td}><span style={S.badge("match")}>user</span></td>
-                  <td style={S.td}>{sessions.length}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
-    );
-  }
 
   function renderFavourites() {
     const count = favourites.length;
@@ -1248,7 +1173,13 @@ export default function App() {
           {page === "register" && renderAuth(false)}
           {page === "profile" && user && renderProfile()}
           {page === "favourites" && user && renderFavourites()}
-          {page === "admin" && user?.isAdmin && renderAdmin()}
+          {page === "admin" && user?.isAdmin && (
+            <AdminPage
+              user={user}
+              onLogout={handleLogout}
+              onNavigate={setPage}
+            />
+          )}
           {page === 'shopping-list' && (
             <ShoppingListPage
               onBack={() => setPage('chat')}
@@ -1293,32 +1224,6 @@ export default function App() {
             }
           }}
         />
-      )}
-
-      {/* Edit recipe modal */}
-      {editRecipe && (
-        <div style={S.modalOverlay} onClick={() => setEditRecipe(null)}>
-          <div style={S.modalCard} onClick={e => e.stopPropagation()}>
-            <div style={S.modalTitle}>{editRecipe.name ? `Edit: ${editRecipe.name}` : "Add recipe"}</div>
-            {[["name", "Recipe name"], ["cuisine", "Cuisine"], ["ingredients", "Ingredients (comma-separated)"], ["dietary", "Dietary tags (comma-separated)"], ["allergens", "Allergens (comma-separated)"], ["instructions", "Instructions"]].map(([field, label]) => (
-              <div key={field} style={S.formGroup}>
-                <label style={S.label}>{label}</label>
-                {field === "instructions"
-                  ? <textarea style={{ ...S.input, height: 80, resize: "vertical" }} value={editRecipe[field]} onChange={e => setEditRecipe(p => ({ ...p, [field]: e.target.value }))} />
-                  : <input style={S.input} value={Array.isArray(editRecipe[field]) ? editRecipe[field].join(", ") : editRecipe[field]}
-                    onChange={e => setEditRecipe(p => ({ ...p, [field]: ["ingredients", "dietary", "allergens"].includes(field) ? e.target.value.split(",").map(s => s.trim()).filter(Boolean) : e.target.value }))} />
-                }
-              </div>
-            ))}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button style={S.btnPrimary} onClick={() => {
-                setAdminRecipes(prev => prev.find(r => r.id === editRecipe.id) ? prev.map(r => r.id === editRecipe.id ? editRecipe : r) : [...prev, editRecipe]);
-                setEditRecipe(null);
-              }}>Save</button>
-              <button style={S.btn} onClick={() => setEditRecipe(null)}>Cancel</button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Help modal */}
