@@ -267,6 +267,9 @@ export default function App() {
   const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
   const [authError, setAuthError] = useState("");
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showForgotPwd, setShowForgotPwd] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMsg, setForgotMsg] = useState('');
   const [regDietaryTags, setRegDietaryTags] = useState([]);
   const [regAllergens, setRegAllergens] = useState([]);
   const [sessionId, setSessionId] = useState(null);
@@ -676,6 +679,17 @@ export default function App() {
     }
   }
 
+  async function handleForgotPassword(e) {
+    e.preventDefault();
+    setForgotMsg('');
+    try {
+      await api.post('/api/auth/forgot-password', { email: forgotEmail });
+      setForgotMsg('If that email is registered, a reset link has been sent.');
+    } catch (_) {
+      setForgotMsg('If that email is registered, a reset link has been sent.');
+    }
+  }
+
   async function handleLogout() {
     try {
       await api.post("/api/auth/logout");
@@ -1079,6 +1093,14 @@ export default function App() {
                   <label style={S.label}>Password</label>
                   <input style={S.input} type="password" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
                 </div>
+                {isLogin && (
+                  <div style={{ textAlign: 'right', marginBottom: 8, marginTop: -8 }}>
+                    <span style={{ fontSize: 12, color: '#555', textDecoration: 'underline', cursor: 'pointer' }}
+                      onClick={() => { setShowForgotPwd(true); setForgotMsg(''); setForgotEmail(''); }}>
+                      Forgot password?
+                    </span>
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -1193,6 +1215,32 @@ export default function App() {
       {sessionExpired && (
         <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: '#dc2626', color: '#fff', padding: '10px 20px', borderRadius: 8, zIndex: 200, fontSize: 13, fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
           ⏱ Session expired — starting a new conversation…
+        </div>
+      )}
+
+      {showForgotPwd && (
+        <div style={S.modalOverlay} onClick={() => setShowForgotPwd(false)}>
+          <div style={{ ...S.modalCard, width: 360 }} onClick={e => e.stopPropagation()}>
+            <div style={S.modalTitle}>Reset Password</div>
+            {forgotMsg ? (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#16a34a', marginBottom: 16 }}>
+                {forgotMsg}
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword}>
+                <div style={S.formGroup}>
+                  <label style={S.label}>Email Address</label>
+                  <input style={S.input} type="email" placeholder="you@email.com"
+                    value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} />
+                </div>
+                <button type="submit" style={S.formBtn}>Send Reset Email</button>
+              </form>
+            )}
+            <div style={{ ...S.formLink, color: '#888', marginTop: 12 }}
+              onClick={() => setShowForgotPwd(false)}>
+              ← Back to login
+            </div>
+          </div>
         </div>
       )}
 
