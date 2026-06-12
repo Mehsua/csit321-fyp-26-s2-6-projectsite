@@ -268,3 +268,82 @@ describe('AuthService.register — with dietary and allergen preferences', () =>
     expect(anyInsert).not.toHaveBeenCalled();
   });
 });
+
+// ── logout ────────────────────────────────────────────────────────────────────
+
+describe('AuthService.logout', () => {
+  test('deactivates sessions for user found by token', async () => {
+    supabaseAdmin.auth.getUser = jest.fn().mockResolvedValue({
+      data: { user: { id: 'uuid-logout' } }, error: null,
+    });
+    const mockEq1 = jest.fn().mockReturnThis();
+    const mockEq2 = jest.fn().mockResolvedValue({ error: null });
+    const mockUpdate = jest.fn().mockReturnValue({ eq: mockEq1 });
+    mockEq1.mockReturnValue({ eq: mockEq2 });
+    supabaseAdmin.from.mockReturnValue({ update: mockUpdate });
+
+    await AuthService.logout('token-abc');
+
+    expect(mockUpdate).toHaveBeenCalledWith({ is_active: false });
+    expect(mockEq1).toHaveBeenCalledWith('user_id', 'uuid-logout');
+    expect(mockEq2).toHaveBeenCalled();
+  });
+
+  test('returns silently when getUser returns an error', async () => {
+    supabaseAdmin.auth.getUser = jest.fn().mockResolvedValue({
+      data: { user: null }, error: { message: 'invalid token' },
+    });
+
+    await expect(AuthService.logout('bad-token')).resolves.toBeUndefined();
+    expect(supabaseAdmin.from).not.toHaveBeenCalled();
+  });
+});
+
+// ── getMe ─────────────────────────────────────────────────────────────────────
+
+describe('AuthService.getMe', () => {
+  test('returns user profile for a valid userId', async () => {
+    const profile = { user_id: 'uuid-me', email: 'me@test.com', name: 'Me', role: 'registered', is_active: true, created_at: '2026-01-01' };
+    supabaseAdmin.from.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      eq:     jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: profile, error: null }),
+    });
+
+    const result = await AuthService.getMe('uuid-me');
+    expect(supabaseAdmin.from).toHaveBeenCalledWith('users');
+    expect(result.email).toBe('me@test.com');
+    expect(result.role).toBe('registered');
+  });
+
+  test('throws 404 when user is not found', async () => {
+    supabaseAdmin.from.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      eq:     jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } }),
+    });
+
+    await expect(AuthService.getMe('uuid-ghost')).rejects.toMatchObject({ status: 404 });
+    expect(supabaseAdmin.from).toHaveBeenCalledWith('users');
+  });
+});
+
+// ── login — deactivated account ───────────────────────────────────────────────
+
+describe('AuthService.login — deactivated account', () => {
+  test('returns 401 when account is_active=false', async () => {
+    supabaseAdmin.from.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      eq:     jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({
+        data: { user_id: 'uuid-deact', email: 'd@test.com', name: 'D', role: 'registered', is_locked: false, lock_until: null, fail_count: 0, is_active: false },
+        error: null,
+      }),
+      update: jest.fn().mockReturnThis(),
+    });
+
+    await expect(
+      AuthService.login({ email: 'd@test.com', password: 'any' })
+    ).rejects.toMatchObject({ status: 401, message: 'Account has been deactivated' });
+  });
+});

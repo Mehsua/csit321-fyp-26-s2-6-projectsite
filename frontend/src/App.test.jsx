@@ -13,6 +13,7 @@ import { api } from './lib/api';
 import MealPlanPage from './components/MealPlanPage';
 import SupportAnswerMsg from './components/SupportAnswerMsg';
 import AdminPage from './components/AdminPage';
+import ShoppingListPage from './components/ShoppingListPage';
 
 const mockRecipe = {
   recipe_id: '1',
@@ -590,5 +591,58 @@ describe('AdminPage', () => {
     expect(screen.getByText(/📖 Recipes/i)).toBeInTheDocument();
     expect(screen.getByText(/👥 Users/i)).toBeInTheDocument();
     expect(screen.getByText(/⚠ Error Logs/i)).toBeInTheDocument();
+  });
+});
+
+// ── ShoppingListPage — extended tests ─────────────────────────────────────────
+
+const mockItems = [
+  { item_id: 'i-1', ingredient_id: 'ing-1', name: 'chicken', category: 'Meat' },
+  { item_id: 'i-2', ingredient_id: 'ing-2', name: 'milk',    category: 'Dairy' },
+  { item_id: 'i-3', ingredient_id: 'ing-3', name: 'garlic',  category: 'Produce' },
+];
+
+describe('ShoppingListPage — extended', () => {
+  it('renders items grouped by category', () => {
+    render(<ShoppingListPage onBack={() => {}} user={null} items={mockItems} onClear={() => {}} />);
+    expect(screen.getByText('chicken')).toBeInTheDocument();
+    expect(screen.getByText('milk')).toBeInTheDocument();
+    expect(screen.getByText('garlic')).toBeInTheDocument();
+    expect(screen.getByText(/Meat/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dairy/i)).toBeInTheDocument();
+    expect(screen.getByText(/Produce/i)).toBeInTheDocument();
+  });
+
+  it('updates checked count when a checkbox is clicked', async () => {
+    const user = userEvent.setup();
+    render(<ShoppingListPage onBack={() => {}} user={null} items={mockItems} onClear={() => {}} />);
+
+    expect(screen.getByText(/0 checked/i)).toBeInTheDocument();
+    await user.click(screen.getByText('chicken'));
+    expect(screen.getByText(/1 checked/i)).toBeInTheDocument();
+  });
+
+  it('calls onClear when Clear All is clicked', async () => {
+    const user = userEvent.setup();
+    const onClear = vi.fn().mockResolvedValue(undefined);
+    render(<ShoppingListPage onBack={() => {}} user={null} items={mockItems} onClear={onClear} />);
+
+    await user.click(screen.getByRole('button', { name: /Clear All/i }));
+    expect(onClear).toHaveBeenCalled();
+  });
+
+  it('shows at least one Export button', () => {
+    render(<ShoppingListPage onBack={() => {}} user={null} items={mockItems} onClear={() => {}} />);
+    expect(screen.getAllByRole('button', { name: /Export/i }).length).toBeGreaterThan(0);
+  });
+
+  it('shows guest banner when user is null', () => {
+    render(<ShoppingListPage onBack={() => {}} user={null} items={mockItems} onClear={() => {}} />);
+    expect(screen.getByText(/Guest/i)).toBeInTheDocument();
+  });
+
+  it('hides guest banner when user is logged in', () => {
+    render(<ShoppingListPage onBack={() => {}} user={{ name: 'Alice' }} items={mockItems} onClear={() => {}} />);
+    expect(screen.queryByText(/Guest/i)).not.toBeInTheDocument();
   });
 });

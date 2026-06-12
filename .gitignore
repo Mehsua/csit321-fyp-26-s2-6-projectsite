@@ -47,3 +47,4 @@ CODEBASE.md
 docs/
 supabase/
 backend/test-output.txt
+!docs/testing/ 
