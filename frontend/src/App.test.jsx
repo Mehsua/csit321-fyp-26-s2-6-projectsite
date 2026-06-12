@@ -12,6 +12,7 @@ import App from './App';
 import { api } from './lib/api';
 import MealPlanPage from './components/MealPlanPage';
 import SupportAnswerMsg from './components/SupportAnswerMsg';
+import AdminPage from './components/AdminPage';
 
 const mockRecipe = {
   recipe_id: '1',
@@ -565,5 +566,29 @@ describe('SupportAnswerMsg', () => {
     );
     expect(screen.getByText(/couldn't find/i)).toBeInTheDocument();
     expect(screen.getByText(/contact support/i)).toBeInTheDocument();
+  });
+});
+
+// ── AdminPage ──────────────────────────────────────────────────────────────────
+
+describe('AdminPage', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ totalRecipes: 0, registeredUsers: 0, activeSessions: 0, unresolvedErrors: 0, recentRecipes: [], recentErrors: [] }),
+    });
+  });
+
+  test('renders Admin Panel label in sidebar', () => {
+    render(<AdminPage user={{ name: 'Admin', role: 'admin', isAdmin: true }} onLogout={() => {}} onNavigate={() => {}} />);
+    expect(screen.getByText(/Admin Panel/i)).toBeInTheDocument();
+  });
+
+  test('renders Dashboard, Recipes, Users, Error Logs nav items in sidebar', () => {
+    render(<AdminPage user={{ name: 'Admin', role: 'admin', isAdmin: true }} onLogout={() => {}} onNavigate={() => {}} />);
+    expect(screen.getByText(/📊 Dashboard/i)).toBeInTheDocument();
+    expect(screen.getByText(/📖 Recipes/i)).toBeInTheDocument();
+    expect(screen.getByText(/👥 Users/i)).toBeInTheDocument();
+    expect(screen.getByText(/⚠ Error Logs/i)).toBeInTheDocument();
   });
 });
