@@ -7,7 +7,7 @@
 ---
 
 ## Current Phase Completed
-Phase 9 — Customer Support
+Phase 10 — Admin Panel
 
 ---
 
@@ -22,9 +22,10 @@ Phase 9 — Customer Support
 │   │   │   ├── IngredientConfirmMsg.jsx   Confirmation UI — shows extracted ingredients with Confirm/Edit buttons; local editing state; blocks recipe search until confirmed
 │   │   │   ├── ShoppingListPage.jsx        Shopping list page — categorised items with checkboxes, export, guest banner, clear all
 │   │   │   ├── MealPlanPage.jsx            Meal plan page — tabbed by day, recipe cards with perishable warnings, nutrition summary, remove and shopping list buttons
-│   │   │   └── SupportAnswerMsg.jsx   FAQ answer card — shows question/answer when matched, escalation button, confirmed state
+│   │   │   ├── SupportAnswerMsg.jsx   FAQ answer card — shows question/answer when matched, escalation button, confirmed state
+│   │   │   └── AdminPage.jsx          Full admin panel (dark sidebar): Dashboard stats + recent tables, Recipe CRUD (table + modal), User management (lock/unlock/deactivate/reactivate), Error Logs (resolve/clear)
 │   │   ├── setupTests.js               Vitest setup — imports @testing-library/jest-dom, stubs scrollIntoView
-│   │   └── App.test.jsx                Frontend behavioural tests (23 tests) — confirmation flow, guest banner, Continue as Guest, MealPlanPage empty state and recipe render
+│   │   └── App.test.jsx                Frontend behavioural tests (27 tests) — confirmation flow, guest banner, Continue as Guest, MealPlanPage empty state and recipe render, AdminPage sidebar render
 │   │   ├── lib/
 │   │   │   └── api.js          Fetch wrapper — injects Authorization: Bearer from localStorage
 │   │   ├── index.css           Global reset styles
@@ -43,7 +44,8 @@ Phase 9 — Customer Support
 │   │   │   ├── recipes.js      GET /api/recipes/:id/instructions, POST /api/recipes/recommend, GET /api/recipes/:id
 │   │   │   ├── shoppingList.js     POST /api/shopping-list/generate (optionalAuth), GET / (auth), DELETE / (auth)
 │   │   │   ├── mealPlan.js         POST /generate, GET /, DELETE /items/:itemId, POST /items (all registered/admin auth)
-│   │   │   └── support.js          POST /query, POST /escalate (both optionalAuth)
+│   │   │   ├── support.js          POST /query, POST /escalate (both optionalAuth)
+│   │   │   └── admin.js            GET /dashboard, recipe CRUD, user mgmt, error log mgmt (all admin-only)
 │   │   ├── controllers/
 │   │   │   ├── authController.js      HTTP handlers for auth routes
 │   │   │   ├── sessionController.js   HTTP handler for session route
@@ -51,7 +53,8 @@ Phase 9 — Customer Support
 │   │   │   ├── recipeController.js    HTTP handlers — getInstructions, recommend, getById
 │   │   │   ├── shoppingListController.js  generate, getList, clearList handlers
 │   │   │   ├── mealPlanController.js  generate, getPlan, deletePlanItem, addItem handlers
-│   │   │   └── supportController.js  query, escalate handlers
+│   │   │   ├── supportController.js  query, escalate handlers
+│   │   │   └── adminController.js    HTTP handlers for all admin routes (dashboard, recipe CRUD, user mgmt, error logs)
 │   │   ├── services/
 │   │   │   ├── AuthService.js         register/login/logout/getMe + lockout logic
 │   │   │   ├── SessionService.js      createGuestSession/createAuthSession
@@ -59,13 +62,15 @@ Phase 9 — Customer Support
 │   │   │   ├── RecipeService.js       recommend (scoring + dietary filter + allergen flag), getById
 │   │   │   ├── ShoppingListService.js     generateMissingItems, saveList, getList, clearList
 │   │   │   ├── MealPlanService.js         generateAndSavePlan, getPlan, deletePlanItem, addItemToPlan
-│   │   │   └── SupportService.js     queryFAQ (keyword overlap scoring), createSupportRequest
+│   │   │   ├── SupportService.js     queryFAQ (keyword overlap scoring), createSupportRequest
+│   │   │   ├── AdminService.js       getDashboardStats, getRecentRecipes, getRecentErrors, listRecipes, createRecipe, updateRecipe, deleteRecipe, listUsers, lockUser, unlockUser, deactivateUser, reactivateUser, getErrorLogs, resolveErrorLog, clearResolvedLogs
+│   │   │   └── ErrorLogService.js    logError({ userId, errorType, message, endpoint }) — singleton; called by errorHandler for 500 errors
 │   │   ├── db/
 │   │   │   └── supabase.js     Supabase dual-client (supabase=anon, supabaseAdmin=service role)
 │   │   └── middleware/
 │   │       ├── authenticate.js   JWT → req.user (validates via supabaseAdmin.auth.getUser)
 │   │       ├── requireRole.js    Role guard factory: requireRole('admin') or requireRole(['admin','registered'])
-│   │       └── errorHandler.js   Global Express error handler
+│   │       └── errorHandler.js   Global Express error handler — auto-logs 500 errors via ErrorLogService
 │   ├── supabase/
 │   │   ├── migrations/
 │   │   │   ├── 20260611000000_initial_schema.sql   20-table schema
@@ -98,8 +103,11 @@ Phase 9 — Customer Support
 │   │   ├── shopping-list.routes.test.js    Shopping list route integration tests (9 tests)
 │   │   ├── meal-plan.service.test.js       MealPlanService unit tests (10 tests)
 │   │   ├── meal-plan.routes.test.js        Meal plan route integration tests (9 tests)
-│   ├── support.service.test.js    SupportService unit tests (10 tests)
-│   └── support.routes.test.js    Support route integration tests (9 tests)
+│   │   ├── support.service.test.js    SupportService unit tests (10 tests)
+│   │   ├── support.routes.test.js    Support route integration tests (9 tests)
+│   │   ├── error-log.service.test.js  ErrorLogService unit tests (5 tests)
+│   │   ├── admin.service.test.js      AdminService unit tests (15 tests)
+│   │   └── admin.routes.test.js       Admin routes integration tests (10 tests)
 │   ├── server.js               Express entry point — exports app for testing
 │   ├── package.json            jest + supertest in devDependencies; test script configured
 │   └── .env.example            Required env var template (commit this)
@@ -197,6 +205,19 @@ cd frontend && npm run dev    # http://localhost:5173
 | POST | /api/meal-plan/items | Yes (registered/admin) | Adds a single recipe to current plan (creates plan if none). Body: `{ recipeId, dayNumber? }`. Returns 201 `{ plan_id }`. 400 if recipeId missing. | Phase 8 |
 | POST | /api/support/query | Optional (Bearer) | Check user message against FAQ entries. Body: `{ message }`. Returns `{ matched: boolean, question?, answer?, category?, faq_id? }`. 400 on missing/empty message. | Phase 9 |
 | POST | /api/support/escalate | Optional (Bearer) | Create a support request and return contact info. Body: `{ message }`. Returns `{ request_id, contact_info }` (201). 400 on missing message. | Phase 9 |
+| GET | /api/admin/dashboard | Yes (admin) | Dashboard stats + recent recipes/errors. Returns `{ totalRecipes, registeredUsers, activeSessions, unresolvedErrors, recentRecipes, recentErrors }` | Phase 10 |
+| GET | /api/admin/recipes | Yes (admin) | Paginated recipe list with tags/allergens/nutrition status. Query: search, category, page, page_size | Phase 10 |
+| POST | /api/admin/recipes | Yes (admin) | Create recipe with ingredients/tags/allergens/nutrition. Body: `{ name, ... }`. 400 if name missing. Returns 201 `{ recipe }` | Phase 10 |
+| PUT | /api/admin/recipes/:id | Yes (admin) | Update recipe fields. Pass only fields to change. Returns `{ message }` | Phase 10 |
+| DELETE | /api/admin/recipes/:id | Yes (admin) | Soft-delete recipe (is_active=false). Returns 204 | Phase 10 |
+| GET | /api/admin/users | Yes (admin) | Paginated user list with roles and lock status. Query: search, role, status, page, page_size | Phase 10 |
+| PUT | /api/admin/users/:id/lock | Yes (admin) | Set is_locked=true. Returns `{ message }` | Phase 10 |
+| PUT | /api/admin/users/:id/unlock | Yes (admin) | Reset is_locked, fail_count, lock_until. Returns `{ message }` | Phase 10 |
+| PUT | /api/admin/users/:id/deactivate | Yes (admin) | Set is_active=false. Returns `{ message }` | Phase 10 |
+| PUT | /api/admin/users/:id/reactivate | Yes (admin) | Set is_active=true, reset lock state. Returns `{ message }` | Phase 10 |
+| GET | /api/admin/error-logs | Yes (admin) | Paginated error log list. Query: type, status (open/resolved), search, page, page_size | Phase 10 |
+| PUT | /api/admin/error-logs/:id/resolve | Yes (admin) | Mark a log entry as resolved. Returns `{ message }` | Phase 10 |
+| DELETE | /api/admin/error-logs/resolved | Yes (admin) | Delete all resolved log entries. Returns 204 | Phase 10 |
 
 ---
 
@@ -217,6 +238,8 @@ cd frontend && npm run dev    # http://localhost:5173
 | ShoppingListService | `backend/src/services/ShoppingListService.js` | `generateMissingItems(recipeId, sessionIngredients)` → ShoppingItem[]; `saveList(userId, items)` → listId; `getList(userId)` → {list_id, items}; `clearList(userId)`. Deduplicates via DB UNIQUE constraint + upsert. | Phase 7 |
 | MealPlanService | `backend/src/services/MealPlanService.js` | `generateAndSavePlan(userId, sessionIngredients, numDays)` → plan (scores recipes, perishable-first sort, 2/day × numDays, nutrition summaries, top_up_items; skips DB when userId null); `getPlan(userId)` → plan or null; `deletePlanItem(userId, itemId)` → void (throws {status:404} if not found/owned); `addItemToPlan(userId, recipeId, dayNumber)` → planId (creates plan if none). | Phase 8 |
 | SupportService | `backend/src/services/SupportService.js` | `queryFAQ(message)` — fetches all active faq_entries, scores by keyword overlap (words > 3 chars, not stop words), returns best match or `{ matched: false }`; `createSupportRequest(userId, message)` — inserts into support_requests (user_id nullable for guests), returns `{ request_id, contact_info }` | Phase 9 |
+| AdminService | `backend/src/services/AdminService.js` | getDashboardStats, getRecentRecipes, getRecentErrors, listRecipes, createRecipe (with ingredient upsert + tag/allergen links), updateRecipe, deleteRecipe (soft), listUsers, lockUser, unlockUser, deactivateUser, reactivateUser, getErrorLogs, resolveErrorLog, clearResolvedLogs | Phase 10 |
+| ErrorLogService | `backend/src/services/ErrorLogService.js` | Singleton. `logError({ userId, errorType, message, endpoint })` — inserts into error_logs; called by errorHandler for all 500 errors | Phase 10 |
 
 ---
 
@@ -277,6 +300,11 @@ cd frontend && npm run dev    # http://localhost:5173
 | `backend/src/middleware/authenticate.js` | JWT validation: getUser → load public.users row → set req.user | Returns 401 if token invalid, user inactive, or locked |
 | `backend/src/middleware/requireRole.js` | Role guard: requireRole('admin') or requireRole(['admin','registered']) | 401 if no req.user, 403 if role mismatch |
 | `backend/tests/setup.js` | Sets dummy env vars for Jest so supabase.js doesn't throw on import | Required for all test files |
+| `frontend/src/components/AdminPage.jsx` | Full admin panel with dark sidebar. Dashboard: 4 stat cards + recent recipes/errors mini-tables. Recipes: CRUD table + add/edit modal (name/description/category/time/servings/instructions/ingredients/tags/allergens/nutrition). Users: lock/unlock/deactivate/reactivate; admin accounts show "Protected". Error Logs: status filter, resolve per-row, clear resolved. | Added Phase 10 |
+| `backend/src/services/ErrorLogService.js` | Singleton. logError() inserts into error_logs. Called by errorHandler for all 500 errors silently (.catch(() => {})). | Added Phase 10 |
+| `backend/src/services/AdminService.js` | All admin DB queries. Dashboard stats via parallel Promise.all. Recipe CRUD with ingredient upsert + junction table logic. User management. Error log filtering and resolution. | Added Phase 10 |
+| `backend/src/controllers/adminController.js` | 13 handlers: getDashboard, listRecipes, createRecipe (validates name), updateRecipe, deleteRecipe, listUsers, lockUser, unlockUser, deactivateUser, reactivateUser, listErrorLogs, resolveErrorLog, clearResolvedLogs | Added Phase 10 |
+| `backend/src/routes/admin.js` | All admin routes protected by authAdmin = [authenticate, requireRole('admin')]. DELETE /error-logs/resolved registered before any :id pattern. | Added Phase 10 |
 
 ---
 
@@ -322,3 +350,4 @@ cd frontend && npm run dev    # http://localhost:5173
 | Phase 7 | 2026-06-11 | ShoppingListService (generate, save, get, clear). Shopping list routes (POST /generate, GET, DELETE). ShoppingListPage component. App.jsx: addToShoppingList, clearShoppingList, session timeout (30-min inactivity → banner → reset), 🛒 topbar button, RecipeCardMsg 🛒 button, RecipeModal "🛒 Add to List". 121 backend tests + 21 frontend tests passing. |
 | Phase 8 | 2026-06-12 | Migration 006 (meal_plan schema fix + ingredients.is_perishable). Seed 004 (14 perishable ingredients). MealPlanService (generateAndSavePlan — perishable-only filter + score sort, 2/day × numDays, top_up_items, nutrition_summary; getPlan; deletePlanItem with 404 guard; addItemToPlan). mealPlanController + mealPlan.js routes registered at /api/meal-plan. MealPlanPage.jsx component. App.jsx: confirmedIngredients state (captured in runRecommend), mealPlan/mealPlanLoading state, generateMealPlan/deleteMealPlanItem/addRecipeToMealPlan/handleAddToShoppingListFromPlan functions, 📅 topbar button, "📅 Add to Meal Plan" in RecipeModal, meal-plan page routing. 140 backend tests + 23 frontend tests passing. |
 | Phase 9 | 2026-06-12 | SupportService (queryFAQ, createSupportRequest). Support routes (POST /query, POST /escalate). SupportAnswerMsg component. sendMessage support detection. handleEscalate. Seed 005 (15 FAQ entries). 159 backend tests + 25 frontend tests passing. |
+| Phase 10 | 2026-06-12 | ErrorLogService singleton (logError). AdminService (getDashboardStats, recipe CRUD with ingredient upsert, user mgmt, error log mgmt). adminController + /api/admin routes registered. errorHandler now auto-logs 500 errors. AdminPage.jsx (dark sidebar — Dashboard, Recipes, Users, Error Logs with modal, lock/unlock/deactivate/reactivate, resolve/clear). App.jsx renderAdmin() removed, replaced with AdminPage component. 189 backend tests + 27 frontend tests passing. |

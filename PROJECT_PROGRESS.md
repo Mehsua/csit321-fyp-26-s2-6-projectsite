@@ -1,7 +1,7 @@
 # Project Progress — FYP-26-S2-6 AI Food Assistant Chatbot (FoodBot)
 
 ## Current Phase
-Phase 9 — COMPLETE. Phase 10 (Admin Panel) — NEXT.
+Phase 10 — COMPLETE. Phase 11 (Testing) — NEXT.
 
 ---
 
@@ -19,7 +19,7 @@ Phase 9 — COMPLETE. Phase 10 (Admin Panel) — NEXT.
 | 7 | Shopping List + Session Management | Shopping list export (categorised), 30-min timeout, reset, guest mode banner | COMPLETE | Full build |
 | 8 | Meal Planning | 3-day plan, perishable priority, top-up shopping list | COMPLETE | Full build |
 | 9 | Customer Support | FAQ lookup, usage guidance, escalation, support_requests table | COMPLETE | Full build |
-| 10 | Admin Panel | Dashboard stats, recipe CRUD, user management, error logs | PENDING | Full build |
+| 10 | Admin Panel | Dashboard stats, recipe CRUD, user management, error logs | COMPLETE | Full build |
 | 11 | Testing | Unit tests, integration tests, test case log (Sprint Testing format) | PENDING | Submission |
 | 12 | Deployment | Vercel (frontend), Render (backend), environment variable setup on platforms | PENDING | Submission |
 
@@ -340,6 +340,54 @@ Phase 9 — COMPLETE. Phase 10 (Admin Panel) — NEXT.
 
 **Pending user action:**
 - [ ] Run `backend/supabase/seeds/005_faq_seed.sql` in Supabase Dashboard → SQL Editor
+
+---
+
+## Phase 10 — Admin Panel
+**Status:** COMPLETE
+**Date:** 2026-06-12
+**Plan file:** `docs/superpowers/plans/2026-06-12-phase-10-admin-panel.md`
+
+**Goal:** Build a fully functional admin panel with Dashboard, Recipe CRUD, User Management, and Error Logs — wired to real backend APIs — replacing the stub `renderAdmin()` in App.jsx.
+
+**What was delivered:**
+- `ErrorLogService` (singleton) — `logError({ userId, errorType, message, endpoint })` inserts into error_logs; called by errorHandler for all 500 errors silently
+- `errorHandler.js` updated — auto-logs 500 errors via ErrorLogService with `.catch(() => {})` guard
+- `AdminService` — 15 methods: getDashboardStats (parallel Promise.all), getRecentRecipes, getRecentErrors, listRecipes (with pagination/search/category), createRecipe (ingredient upsert + tag/allergen junction links), updateRecipe, deleteRecipe (soft), listUsers, lockUser, unlockUser, deactivateUser, reactivateUser, getErrorLogs, resolveErrorLog, clearResolvedLogs
+- `adminController.js` — 13 handlers with input validation (name required on create)
+- `backend/src/routes/admin.js` — all routes protected by `authAdmin = [authenticate, requireRole('admin')]`; registered at `/api/admin` in server.js
+- `AdminPage.jsx` — dark sidebar layout: Dashboard (4 stat cards + recent recipes/errors mini-tables with "View All" links), Recipes (table + add/edit modal with ingredient/tag/allergen/nutrition fields), Users (lock/unlock/deactivate/reactivate; admin accounts show "Protected"), Error Logs (open/resolved/total counts, status filter, resolve per-row, clear resolved)
+- App.jsx — `renderAdmin()` removed, `<AdminPage>` component wired in; `adminTab`/`adminRecipes`/`editRecipe` state removed
+- 189 backend tests passing (159 previous + 5 ErrorLogService + 15 AdminService + 10 admin routes)
+- 27 frontend tests passing (25 previous + 2 AdminPage sidebar tests)
+
+**Acceptance Criteria:**
+
+| ID | Criterion | Result |
+|---|---|---|
+| P10-01 | GET /api/admin/dashboard returns 200 + totalRecipes, registeredUsers, activeSessions, unresolvedErrors | PASS (route test) |
+| P10-02 | GET /api/admin/dashboard returns 401 without Bearer token | PASS (route test — mock auth enforced) |
+| P10-03 | GET /api/admin/recipes returns 200 + recipes array + total | PASS (route test) |
+| P10-04 | POST /api/admin/recipes without name → 400 | PASS (route test) |
+| P10-05 | POST /api/admin/recipes with valid payload → 201 + recipe object | PASS (route test) |
+| P10-06 | DELETE /api/admin/recipes/:id → 204 | PASS (route test) |
+| P10-07 | GET /api/admin/users returns 200 + users array | PASS (route test) |
+| P10-08 | PUT /api/admin/users/:id/lock → 200 + message | PASS (route test) |
+| P10-09 | GET /api/admin/error-logs returns 200 + logs array | PASS (route test) |
+| P10-10 | PUT /api/admin/error-logs/:id/resolve → 200 + message | PASS (route test) |
+| P10-11 | DELETE /api/admin/error-logs/resolved → 204 | PASS (route test) |
+| P10-12 | ErrorLogService.logError() inserts correct fields | PASS (service test) |
+| P10-13 | getDashboardStats returns 4 counts via parallel queries | PASS (service test) |
+| P10-14 | listRecipes returns paginated recipes with dietary_tags/allergens/ingredient_count | PASS (service test) |
+| P10-15 | createRecipe inserts recipe + ingredient links | PASS (service test) |
+| P10-16 | deleteRecipe sets is_active=false | PASS (service test) |
+| P10-17 | lockUser sets is_locked=true; unlockUser resets is_locked/fail_count/lock_until | PASS (service test) |
+| P10-18 | AdminPage sidebar renders Dashboard, Recipes, Users, Error Logs | PASS (frontend test) |
+| P10-19 | AdminPage renders "Admin Panel" label | PASS (frontend test) |
+| P10-20 | errorHandler calls errorLogService.logError for 500 errors | PASS (code review) |
+| P10-21 | npm test (backend) → 189 tests passing | PASS |
+| P10-22 | npm test (frontend) → 27 tests passing | PASS |
+| P10-23 | npm run build (frontend) → succeeds | PASS |
 
 ---
 
