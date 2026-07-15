@@ -1,4 +1,5 @@
 const { OpenAI } = require('openai');
+const { sanitizeReply } = require('../utils/sanitizeReply');
 
 class OpenAIService {
   constructor() {
@@ -48,7 +49,7 @@ class OpenAIService {
       temperature: 0.3
     });
 
-    return response.choices[0].message.content;
+    return sanitizeReply(response.choices[0].message.content);
   }
 
   async chat(messages) {
@@ -72,7 +73,7 @@ Guidelines:
       max_tokens: 300
     });
 
-    return response.choices[0].message.content;
+    return sanitizeReply(response.choices[0].message.content);
   }
 }
 
