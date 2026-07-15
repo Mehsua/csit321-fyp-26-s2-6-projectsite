@@ -48,4 +48,54 @@ async function removeFavourite(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getPreferences, setPreferences, getFavourites, addFavourite, removeFavourite };
+async function getTasteProfile(req, res, next) {
+  try {
+    const data = await getUserService().getTasteProfile(req.user.user_id);
+    res.json(data);
+  } catch (err) { next(err); }
+}
+
+async function setTasteProfile(req, res, next) {
+  try {
+    const { preferredCuisines = [], spiceLevel = 'medium', maxCookingTime = null } = req.body;
+    const VALID_SPICE = ['mild', 'medium', 'spicy'];
+    const VALID_CUISINES = ['Asian', 'Western', 'Italian', 'Indian', 'Mediterranean', 'Mexican'];
+    if (!VALID_SPICE.includes(spiceLevel)) {
+      return res.status(400).json({ error: 'spiceLevel must be mild, medium, or spicy' });
+    }
+    if (!Array.isArray(preferredCuisines) || !preferredCuisines.every(c => VALID_CUISINES.includes(c))) {
+      return res.status(400).json({ error: `preferredCuisines must be an array containing only: ${VALID_CUISINES.join(', ')}` });
+    }
+    if (maxCookingTime !== null && (typeof maxCookingTime !== 'number' || maxCookingTime < 1)) {
+      return res.status(400).json({ error: 'maxCookingTime must be a positive number or null' });
+    }
+    await getUserService().setTasteProfile(req.user.user_id, { preferredCuisines, spiceLevel, maxCookingTime });
+    res.json({ message: 'Taste profile saved' });
+  } catch (err) { next(err); }
+}
+
+async function getMedicalProfile(req, res, next) {
+  try {
+    const conditions = await getUserService().getMedicalProfile(req.user.user_id);
+    res.json({ conditions });
+  } catch (err) { next(err); }
+}
+
+async function setMedicalProfile(req, res, next) {
+  try {
+    const { conditions } = req.body;
+    const VALID = ['Diabetes', 'Hypertension', 'HeartDisease', 'WeightLoss'];
+    if (!Array.isArray(conditions) || !conditions.every(c => VALID.includes(c))) {
+      return res.status(400).json({ error: `conditions must be an array containing only: ${VALID.join(', ')}` });
+    }
+    await getUserService().setMedicalProfile(req.user.user_id, conditions);
+    res.json({ message: 'Medical profile saved' });
+  } catch (err) { next(err); }
+}
+
+module.exports = {
+  getPreferences, setPreferences,
+  getFavourites, addFavourite, removeFavourite,
+  getTasteProfile, setTasteProfile,
+  getMedicalProfile, setMedicalProfile,
+};
