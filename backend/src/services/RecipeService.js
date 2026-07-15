@@ -1,7 +1,7 @@
 const { supabaseAdmin } = require('../db/supabase');
 
 class RecipeService {
-  async recommend({ ingredients = [], dietaryTags = [], allergenNames = [] }) {
+  async recommend({ ingredients = [], dietaryTags = [], allergenNames = [], tasteProfile = null, medicalConditions = [] }) {
     const userIngredients = ingredients.map(i => i.toLowerCase().trim());
 
     const { data: recipes, error } = await supabaseAdmin
@@ -18,13 +18,13 @@ class RecipeService {
     if (error) throw new Error(error.message || String(error));
 
     return (recipes || [])
-      .map(recipe => this._scoreRecipe(recipe, userIngredients, dietaryTags, allergenNames))
+      .map(recipe => this._scoreRecipe(recipe, userIngredients, dietaryTags, allergenNames, tasteProfile, medicalConditions))
       .filter(r => r !== null && r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
   }
 
-  _scoreRecipe(recipe, userIngredients, dietaryTags, allergenNames) {
+  _scoreRecipe(recipe, userIngredients, dietaryTags, allergenNames, tasteProfile, medicalConditions) {
     // Hard dietary exclusion
     if (dietaryTags.length > 0) {
       const recipeTags = (recipe.recipe_dietary_tags || [])
@@ -34,7 +34,7 @@ class RecipeService {
       if (!allTagsMet) return null;
     }
 
-    // Score
+    // Base match score
     const recipeIngredients = (recipe.recipe_ingredients || [])
       .filter(ri => !ri.is_optional)
       .map(ri => ri.ingredients?.name?.toLowerCase())
@@ -48,7 +48,24 @@ class RecipeService {
     );
     const matchingCount = matching.length;
     const missingCount = total - matchingCount;
-    const score = parseFloat(Math.max(0, matchingCount / total - missingCount * 0.05).toFixed(4));
+    const baseScore = Math.max(0, matchingCount / total - missingCount * 0.05);
+
+    // Taste profile boost (max +0.25 total, capped at 1.0)
+    let tasteBoost = 0;
+    if (tasteProfile) {
+      const preferred = (tasteProfile.preferred_cuisines || []).map(c => c.toLowerCase());
+      if (preferred.length > 0 && preferred.includes((recipe.category || '').toLowerCase())) {
+        tasteBoost += 0.15;
+      }
+      if (
+        tasteProfile.max_cooking_time &&
+        recipe.cooking_time &&
+        recipe.cooking_time <= tasteProfile.max_cooking_time
+      ) {
+        tasteBoost += 0.10;
+      }
+    }
+    const score = parseFloat(Math.min(1, baseScore + tasteBoost).toFixed(4));
 
     // Soft allergen flag
     const recipeAllergenNames = (recipe.recipe_allergens || [])
@@ -58,6 +75,26 @@ class RecipeService {
       const u = userAllergen.toLowerCase();
       return recipeAllergenNames.some(d => d === u || d.startsWith(u) || u.startsWith(d));
     });
+
+    // Medical warnings based on nutrition thresholds
+    const medicalWarnings = [];
+    if (medicalConditions.length > 0) {
+      const n = recipe.nutrition_info;
+      if (n) {
+        if (medicalConditions.includes('Diabetes') && n.carbs_g > 45) {
+          medicalWarnings.push('High carb — limit for diabetes');
+        }
+        if (
+          (medicalConditions.includes('Hypertension') || medicalConditions.includes('HeartDisease')) &&
+          n.fats_g > 20
+        ) {
+          medicalWarnings.push('High fat — limit for heart health');
+        }
+        if (medicalConditions.includes('WeightLoss') && n.calories > 450) {
+          medicalWarnings.push('High calorie');
+        }
+      }
+    }
 
     return {
       recipe_id: recipe.recipe_id,
@@ -84,7 +121,8 @@ class RecipeService {
             fats_g: recipe.nutrition_info.fats_g,
             fibre_g: recipe.nutrition_info.fibre_g
           }
-        : null
+        : null,
+      medical_warnings: medicalWarnings,
     };
   }
 
