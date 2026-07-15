@@ -33,7 +33,8 @@ function adaptRecipe(r) {
     score: r.score,
     matched: r.matching_ingredients || [],
     missing: r.missing_ingredients || [],
-    allergen_warning: r.allergen_warning
+    allergen_warning: r.allergen_warning,
+    medical_warnings: r.medical_warnings || [],
   };
 }
 
@@ -111,6 +112,7 @@ const S = {
 function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSave, isSaved, onAddToList, onAddToMealPlan, user }) {
   const pct = Math.round((recipe.score ?? 0) * 100);
   const inst = instructions || {};
+  const [pickingDay, setPickingDay] = useState(false);
 
   return (
     <div style={S.modalOverlay} role="presentation" onClick={onClose}>
@@ -181,6 +183,18 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
           </div>
         )}
 
+        {/* Medical warnings */}
+        {recipe.medical_warnings?.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13 }}>⚕ Medical Flags</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {recipe.medical_warnings.map((w, i) => (
+                <span key={i} style={{ ...S.badge('warn'), display: 'inline-block', width: 'fit-content' }}>⚠ {w}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Cooking instructions */}
         <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>
           Cooking Instructions
@@ -207,13 +221,27 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
         {/* Actions */}
         <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
           <button style={{ ...S.recipeBtn, flex: 1 }} onClick={() => onAddToList && onAddToList(recipe)} title="Add missing ingredients to shopping list">🛒 Add to List</button>
-          {user && (
+          {user && !pickingDay && (
             <button
               style={{ ...S.btn, fontSize: 12, padding: '6px 12px', background: '#f0fdf4', borderColor: '#16a34a', color: '#16a34a', flex: 1 }}
-              onClick={() => onAddToMealPlan && onAddToMealPlan(recipe)}
+              onClick={() => setPickingDay(true)}
             >
               📅 Add to Meal Plan
             </button>
+          )}
+          {user && pickingDay && (
+            <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+              {[1, 2, 3].map(d => (
+                <button
+                  key={d}
+                  style={{ ...S.btn, flex: 1, fontSize: 12, padding: '6px 4px', background: '#f0fdf4', borderColor: '#16a34a', color: '#16a34a' }}
+                  onClick={() => { onAddToMealPlan && onAddToMealPlan(recipe, d); setPickingDay(false); }}
+                >
+                  Day {d}
+                </button>
+              ))}
+              <button style={{ ...S.btn, fontSize: 12, padding: '6px 8px' }} onClick={() => setPickingDay(false)}>✕</button>
+            </div>
           )}
           {onSave && (
             <button style={isSaved ? { ...S.recipeBtnPrimary, flex: 1 } : { ...S.recipeBtn, flex: 1 }} onClick={() => onSave(recipe)}>
@@ -240,8 +268,10 @@ function RecipeCardMsg({ recipe, onView, onSave, saved, onAddToList }) {
       </div>
       <div style={S.recipeMeta}>
         <span>{recipe.cookTime} mins</span>
+        {recipe.calories && <span style={{ fontWeight: 600, color: '#374151' }}>{recipe.calories} kcal</span>}
         {recipe.dietary.slice(0, 2).map(d => <span key={d} style={S.badge("match")}>{d}</span>)}
         {recipe.allergen_warning && <span style={S.badge("red")}>⚠ Allergen</span>}
+        {recipe.medical_warnings?.length > 0 && <span style={S.badge("warn")}>⚠ Medical</span>}
       </div>
       {recipe.missing.length > 0 && (
         <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
@@ -786,10 +816,10 @@ export default function App() {
     } catch (_) {}
   }
 
-  async function addRecipeToMealPlan(recipe) {
+  async function addRecipeToMealPlan(recipe, dayNumber = 1) {
     if (!user) return;
     try {
-      await api.post('/api/meal-plan/items', { recipeId: recipe.recipe_id, dayNumber: 1 });
+      await api.post('/api/meal-plan/items', { recipeId: recipe.recipe_id, dayNumber });
       const { plan } = await api.get('/api/meal-plan');
       setMealPlan(plan);
     } catch (_) {}
