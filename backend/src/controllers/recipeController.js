@@ -53,7 +53,7 @@ async function getInstructions(req, res, next) {
 
 async function recommend(req, res, next) {
   try {
-    const { ingredients, dietary_tags = [], allergen_names = [] } = req.body;
+    const { ingredients, dietary_tags = [], allergen_names = [], taste_profile = null, medical_conditions = [] } = req.body;
     if (!Array.isArray(ingredients) || ingredients.length === 0 ||
         !ingredients.every(i => typeof i === 'string' && i.trim().length > 0)) {
       return res.status(400).json({ error: 'ingredients must be a non-empty array of strings' });
@@ -61,7 +61,9 @@ async function recommend(req, res, next) {
     const recipes = await getRecipeService().recommend({
       ingredients,
       dietaryTags: dietary_tags,
-      allergenNames: allergen_names
+      allergenNames: allergen_names,
+      tasteProfile: taste_profile,
+      medicalConditions: medical_conditions,
     });
     return res.status(200).json({ recipes });
   } catch (err) {

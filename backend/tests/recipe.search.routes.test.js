@@ -66,7 +66,9 @@ describe('POST /api/recipes/recommend', () => {
     expect(RecipeService.prototype.recommend).toHaveBeenCalledWith({
       ingredients: ['garlic'],
       dietaryTags: ['Halal'],
-      allergenNames: ['Dairy']
+      allergenNames: ['Dairy'],
+      tasteProfile: null,
+      medicalConditions: [],
     });
   });
 

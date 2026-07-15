@@ -113,6 +113,57 @@ class UserService {
 
     if (error) throw new Error(error.message || String(error));
   }
+
+  async getTasteProfile(userId) {
+    const { data, error } = await supabaseAdmin
+      .from('user_taste_profiles')
+      .select('preferred_cuisines, spice_level, max_cooking_time')
+      .eq('user_id', userId)
+      .single();
+    if (error && error.code !== 'PGRST116') throw new Error(error.message || String(error));
+    return data || { preferred_cuisines: [], spice_level: 'medium', max_cooking_time: null };
+  }
+
+  async setTasteProfile(userId, { preferredCuisines = [], spiceLevel = 'medium', maxCookingTime = null } = {}) {
+    const { error } = await supabaseAdmin
+      .from('user_taste_profiles')
+      .upsert(
+        {
+          user_id: userId,
+          preferred_cuisines: preferredCuisines,
+          spice_level: spiceLevel,
+          max_cooking_time: maxCookingTime,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
+    if (error) throw new Error(error.message || String(error));
+  }
+
+  async getMedicalProfile(userId) {
+    const { data, error } = await supabaseAdmin
+      .from('user_medical_conditions')
+      .select('condition')
+      .eq('user_id', userId);
+    if (error) throw new Error(error.message || String(error));
+    return (data || []).map(r => r.condition);
+  }
+
+  async setMedicalProfile(userId, conditions = []) {
+    const VALID = ['Diabetes', 'Hypertension', 'HeartDisease', 'WeightLoss'];
+    const filtered = conditions.filter(c => VALID.includes(c));
+    const { error: delError } = await supabaseAdmin
+      .from('user_medical_conditions')
+      .delete()
+      .eq('user_id', userId);
+    if (delError) throw new Error(delError.message || String(delError));
+    if (filtered.length > 0) {
+      const { error: insError } = await supabaseAdmin
+        .from('user_medical_conditions')
+        .insert(filtered.map(condition => ({ user_id: userId, condition })));
+      if (insError) throw new Error(insError.message || String(insError));
+    }
+  }
 }
 
 module.exports = UserService;

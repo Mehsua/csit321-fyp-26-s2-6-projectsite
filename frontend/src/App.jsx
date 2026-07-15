@@ -33,7 +33,8 @@ function adaptRecipe(r) {
     score: r.score,
     matched: r.matching_ingredients || [],
     missing: r.missing_ingredients || [],
-    allergen_warning: r.allergen_warning
+    allergen_warning: r.allergen_warning,
+    medical_warnings: r.medical_warnings || [],
   };
 }
 
@@ -111,6 +112,7 @@ const S = {
 function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSave, isSaved, onAddToList, onAddToMealPlan, user }) {
   const pct = Math.round((recipe.score ?? 0) * 100);
   const inst = instructions || {};
+  const [pickingDay, setPickingDay] = useState(false);
 
   return (
     <div style={S.modalOverlay} role="presentation" onClick={onClose}>
@@ -181,6 +183,18 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
           </div>
         )}
 
+        {/* Medical warnings */}
+        {recipe.medical_warnings?.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13 }}>⚕ Medical Flags</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {recipe.medical_warnings.map((w, i) => (
+                <span key={i} style={{ ...S.badge('warn'), display: 'inline-block', width: 'fit-content' }}>⚠ {w}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Cooking instructions */}
         <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>
           Cooking Instructions
@@ -207,13 +221,27 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
         {/* Actions */}
         <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
           <button style={{ ...S.recipeBtn, flex: 1 }} onClick={() => onAddToList && onAddToList(recipe)} title="Add missing ingredients to shopping list">🛒 Add to List</button>
-          {user && (
+          {user && !pickingDay && (
             <button
               style={{ ...S.btn, fontSize: 12, padding: '6px 12px', background: '#f0fdf4', borderColor: '#16a34a', color: '#16a34a', flex: 1 }}
-              onClick={() => onAddToMealPlan && onAddToMealPlan(recipe)}
+              onClick={() => setPickingDay(true)}
             >
               📅 Add to Meal Plan
             </button>
+          )}
+          {user && pickingDay && (
+            <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+              {[1, 2, 3].map(d => (
+                <button
+                  key={d}
+                  style={{ ...S.btn, flex: 1, fontSize: 12, padding: '6px 4px', background: '#f0fdf4', borderColor: '#16a34a', color: '#16a34a' }}
+                  onClick={() => { onAddToMealPlan && onAddToMealPlan(recipe, d); setPickingDay(false); }}
+                >
+                  Day {d}
+                </button>
+              ))}
+              <button style={{ ...S.btn, fontSize: 12, padding: '6px 8px' }} onClick={() => setPickingDay(false)}>✕</button>
+            </div>
           )}
           {onSave && (
             <button style={isSaved ? { ...S.recipeBtnPrimary, flex: 1 } : { ...S.recipeBtn, flex: 1 }} onClick={() => onSave(recipe)}>
@@ -240,8 +268,10 @@ function RecipeCardMsg({ recipe, onView, onSave, saved, onAddToList }) {
       </div>
       <div style={S.recipeMeta}>
         <span>{recipe.cookTime} mins</span>
+        {recipe.calories && <span style={{ fontWeight: 600, color: '#374151' }}>{recipe.calories} kcal</span>}
         {recipe.dietary.slice(0, 2).map(d => <span key={d} style={S.badge("match")}>{d}</span>)}
         {recipe.allergen_warning && <span style={S.badge("red")}>⚠ Allergen</span>}
+        {recipe.medical_warnings?.length > 0 && <span style={S.badge("warn")}>⚠ Medical</span>}
       </div>
       {recipe.missing.length > 0 && (
         <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
@@ -285,6 +315,10 @@ export default function App() {
   const [recipeInstructions, setRecipeInstructions] = useState({});
   const [helpOpen, setHelpOpen] = useState(false);
   const [savePrefsStatus, setSavePrefsStatus] = useState(null);
+  const [tasteProfile, setTasteProfile] = useState({ preferred_cuisines: [], spice_level: 'medium', max_cooking_time: null });
+  const [medicalConditions, setMedicalConditions] = useState([]);
+  const [saveTasteStatus, setSaveTasteStatus] = useState(null);
+  const [saveMedicalStatus, setSaveMedicalStatus] = useState(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const [shoppingListItems, setShoppingListItems] = useState([]);
@@ -330,6 +364,12 @@ export default function App() {
       }
       const shoppingData = await api.get('/api/shopping-list').catch(() => null);
       if (shoppingData?.items) setShoppingListItems(shoppingData.items);
+      const [tasteData, medicalData] = await Promise.all([
+        api.get('/api/users/me/taste-profile').catch(() => null),
+        api.get('/api/users/me/medical-profile').catch(() => null),
+      ]);
+      if (tasteData?.preferred_cuisines) setTasteProfile(tasteData);
+      if (medicalData?.conditions) setMedicalConditions(medicalData.conditions);
     }
 
     async function initApp() {
@@ -544,6 +584,8 @@ export default function App() {
         ingredients,
         dietary_tags: dietaryTags,
         allergen_names: prefs.allergens,
+        taste_profile: user ? tasteProfile : null,
+        medical_conditions: user ? medicalConditions : [],
       });
       const adapted = (recipes || []).map(adaptRecipe);
       const count = adapted.length;
@@ -646,6 +688,12 @@ export default function App() {
       }
       const shoppingData = await api.get('/api/shopping-list').catch(() => null);
       if (shoppingData?.items) setShoppingListItems(shoppingData.items);
+      const [tasteData, medicalData] = await Promise.all([
+        api.get('/api/users/me/taste-profile').catch(() => null),
+        api.get('/api/users/me/medical-profile').catch(() => null),
+      ]);
+      if (tasteData?.preferred_cuisines) setTasteProfile(tasteData);
+      if (medicalData?.conditions) setMedicalConditions(medicalData.conditions);
     } catch (err) {
       if (err.status === 423) {
         const lockUntil = err.data?.lock_until
@@ -786,10 +834,10 @@ export default function App() {
     } catch (_) {}
   }
 
-  async function addRecipeToMealPlan(recipe) {
+  async function addRecipeToMealPlan(recipe, dayNumber = 1) {
     if (!user) return;
     try {
-      await api.post('/api/meal-plan/items', { recipeId: recipe.recipe_id, dayNumber: 1 });
+      await api.post('/api/meal-plan/items', { recipeId: recipe.recipe_id, dayNumber });
       const { plan } = await api.get('/api/meal-plan');
       setMealPlan(plan);
     } catch (_) {}
@@ -989,6 +1037,119 @@ export default function App() {
             })}
           </div>
           <div style={{ fontSize: 12, color: "#999", marginTop: 10 }}>Recipes containing these allergens will be filtered out.</div>
+        </div>
+        <div style={S.profileCard}>
+          <div style={S.sectionTitle}>Taste Profile</div>
+          <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>Preferred cuisines and cooking preferences help us rank recipe recommendations for you.</div>
+
+          <div style={{ fontWeight: 500, fontSize: 13, marginBottom: 8 }}>Preferred Cuisines</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            {['Asian', 'Western', 'Italian', 'Indian', 'Mediterranean', 'Mexican'].map(cuisine => {
+              const on = tasteProfile.preferred_cuisines.includes(cuisine);
+              return (
+                <button key={cuisine}
+                  style={{ ...S.btn, background: on ? '#f0fdf4' : '#fff', color: on ? '#16a34a' : '#555', borderColor: on ? '#86efac' : '#e5e5e5', fontWeight: on ? 600 : 400 }}
+                  onClick={() => setTasteProfile(p => ({
+                    ...p,
+                    preferred_cuisines: on ? p.preferred_cuisines.filter(c => c !== cuisine) : [...p.preferred_cuisines, cuisine],
+                  }))}>
+                  {cuisine}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ fontWeight: 500, fontSize: 13, marginBottom: 8 }}>Spice Level</div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            {[['mild', 'Mild'], ['medium', 'Medium'], ['spicy', 'Spicy']].map(([val, label]) => {
+              const on = tasteProfile.spice_level === val;
+              return (
+                <button key={val}
+                  style={{ ...S.btn, background: on ? '#f0fdf4' : '#fff', color: on ? '#16a34a' : '#555', borderColor: on ? '#86efac' : '#e5e5e5', fontWeight: on ? 600 : 400 }}
+                  onClick={() => setTasteProfile(p => ({ ...p, spice_level: val }))}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ fontWeight: 500, fontSize: 13, marginBottom: 8 }}>Max Cooking Time</div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+            {[['', 'Any'], ['20', '≤ 20 min'], ['30', '≤ 30 min'], ['45', '≤ 45 min']].map(([val, label]) => {
+              const current = tasteProfile.max_cooking_time ? String(tasteProfile.max_cooking_time) : '';
+              const on = current === val;
+              return (
+                <button key={val || 'any'}
+                  style={{ ...S.btn, background: on ? '#f0fdf4' : '#fff', color: on ? '#16a34a' : '#555', borderColor: on ? '#86efac' : '#e5e5e5', fontWeight: on ? 600 : 400 }}
+                  onClick={() => setTasteProfile(p => ({ ...p, max_cooking_time: val ? parseInt(val) : null }))}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            style={{ ...S.formBtn, marginTop: 16, background: saveTasteStatus === 'saving' ? '#aaa' : '#16a34a' }}
+            disabled={saveTasteStatus === 'saving'}
+            onClick={async () => {
+              setSaveTasteStatus('saving');
+              try {
+                await api.put('/api/users/me/taste-profile', {
+                  preferredCuisines: tasteProfile.preferred_cuisines,
+                  spiceLevel: tasteProfile.spice_level,
+                  maxCookingTime: tasteProfile.max_cooking_time,
+                });
+                setSaveTasteStatus('saved');
+                setTimeout(() => setSaveTasteStatus(null), 2000);
+              } catch {
+                setSaveTasteStatus('error');
+                setTimeout(() => setSaveTasteStatus(null), 3000);
+              }
+            }}>
+            {saveTasteStatus === 'saving' ? 'Saving…' : saveTasteStatus === 'saved' ? '✓ Saved!' : saveTasteStatus === 'error' ? 'Save failed — try again' : 'Save Taste Profile'}
+          </button>
+        </div>
+        <div style={S.profileCard}>
+          <div style={S.sectionTitle}>Medical Profile</div>
+          <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>We will flag recipes that may not suit your health conditions.</div>
+
+          {[
+            ['Diabetes',     'Diabetes',     'Flags high-carb recipes (>45g carbs per serving)'],
+            ['Hypertension', 'Hypertension', 'Flags high-fat recipes (>20g fat per serving)'],
+            ['HeartDisease', 'Heart Disease','Flags high-fat recipes (>20g fat per serving)'],
+            ['WeightLoss',   'Weight Loss',  'Flags high-calorie recipes (>450 kcal per serving)'],
+          ].map(([val, label, desc]) => {
+            const on = medicalConditions.includes(val);
+            return (
+              <div key={val} style={{ ...S.checkRow, marginBottom: 12 }}
+                onClick={() => setMedicalConditions(p => on ? p.filter(c => c !== val) : [...p, val])}>
+                <div style={S.checkBox(on)}>
+                  {on && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" /></svg>}
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, cursor: 'pointer' }}>{label}</div>
+                  <div style={{ fontSize: 11, color: '#888' }}>{desc}</div>
+                </div>
+              </div>
+            );
+          })}
+
+          <button
+            style={{ ...S.formBtn, background: saveMedicalStatus === 'saving' ? '#aaa' : '#16a34a' }}
+            disabled={saveMedicalStatus === 'saving'}
+            onClick={async () => {
+              setSaveMedicalStatus('saving');
+              try {
+                await api.put('/api/users/me/medical-profile', { conditions: medicalConditions });
+                setSaveMedicalStatus('saved');
+                setTimeout(() => setSaveMedicalStatus(null), 2000);
+              } catch {
+                setSaveMedicalStatus('error');
+                setTimeout(() => setSaveMedicalStatus(null), 3000);
+              }
+            }}>
+            {saveMedicalStatus === 'saving' ? 'Saving…' : saveMedicalStatus === 'saved' ? '✓ Saved!' : saveMedicalStatus === 'error' ? 'Save failed — try again' : 'Save Medical Profile'}
+          </button>
         </div>
         <div style={S.profileCard}>
           <button
