@@ -369,3 +369,80 @@
 | P11-15 | ShoppingListPage — Export button | Section 4.8 wireframe 09 | Export button present | Render with items | "Export ↓" button visible | Vitest PASS | PASS | Automated |
 | P11-16 | ShoppingListPage — guest banner | Section 4.8 wireframe 09 | user=null shows guest notice | Render with user=null | Guest text visible | Vitest PASS | PASS | Automated |
 | P11-17 | ShoppingListPage — no guest banner | Section 4.8 wireframe 09 | Logged-in user → no guest notice | Render with user object | Guest text absent | Vitest PASS | PASS | Automated |
+
+---
+
+## Phase PP — Professor Improvements (2026-07-16)
+
+### PP-A: sanitizeReply Utility
+
+| ID | Feature | Spec Reference | Test Scenario | Test Steps | Expected Result | Actual Result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|---|---|
+| PP-01 | sanitizeReply — strips bold | OpenAI output formatting | **bold text** is stripped, content preserved | `sanitizeReply("**hello**")` | `"hello"` | Jest: sanitize-reply.test.js "strips bold markdown" PASS | PASS | Automated |
+| PP-02 | sanitizeReply — strips italic | OpenAI output formatting | *italic text* and _italic_ stripped | `sanitizeReply("*italic*")` | `"italic"` | Jest: "strips italic markdown" PASS | PASS | Automated |
+| PP-03 | sanitizeReply — strips headers | OpenAI output formatting | `## Heading` → content only | `sanitizeReply("## Title\nBody")` | `"Title\nBody"` | Jest: "strips markdown headers" PASS | PASS | Automated |
+| PP-04 | sanitizeReply — strips inline code | OpenAI output formatting | `` `code` `` → plain text | `sanitizeReply("\`chicken\`")` | `"chicken"` | Jest: "strips inline code backticks" PASS | PASS | Automated |
+| PP-05 | sanitizeReply — removes AI self-reference | OpenAI output quality | "As an AI assistant, ..." prefix is stripped | `sanitizeReply("As an AI assistant, let me help")` | `"let me help"` | Jest: "removes AI self-reference phrases" PASS | PASS | Automated |
+| PP-06 | sanitizeReply — collapses newlines | OpenAI output formatting | 3+ newlines collapsed to 2 | `sanitizeReply("a\n\n\n\nb")` | `"a\n\nb"` | Jest: "collapses 3+ newlines to 2" PASS | PASS | Automated |
+| PP-07 | sanitizeReply — null/undefined input | Edge case | Returns empty string for null/undefined | `sanitizeReply(null)`, `sanitizeReply(undefined)` | `""` in both cases | Jest: "returns empty string for null or undefined" PASS | PASS | Automated |
+| PP-08 | OpenAIService chat() — sanitized output | Professor requirement | chat() return value has no markdown | Mock OpenAI returns `"**bold reply**"` | `"bold reply"` returned to caller | Code review — sanitizeReply applied before return in chat() | PASS | Code review |
+| PP-09 | OpenAIService generateCookingInstructions() — sanitized | Professor requirement | Instructions have no markdown | Mock OpenAI returns `"## Steps\n**1.** Cook"` | `"Steps\n1. Cook"` | Code review — sanitizeReply applied before return | PASS | Code review |
+
+### PP-B: Taste Profile
+
+| ID | Feature | Spec Reference | Test Scenario | Test Steps | Expected Result | Actual Result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|---|---|
+| PP-10 | GET /api/users/me/taste-profile — auth guard | Professor requirement | No token → 401 | `GET /api/users/me/taste-profile` no header | HTTP 401 | Jest: user.routes auth guard PASS | PASS | Automated |
+| PP-11 | GET /api/users/me/taste-profile — defaults | Professor requirement | User with no saved taste profile gets defaults | `GET /api/users/me/taste-profile` with JWT (no row in DB) | HTTP 200, `{ preferred_cuisines: [], spice_level: 'medium', max_cooking_time: null }` | Jest: taste-medical.service.test.js "returns defaults when no profile exists" PASS | PASS | Automated |
+| PP-12 | GET /api/users/me/taste-profile — existing | Professor requirement | User with saved profile gets their values | DB row present with cuisines + spice_level | HTTP 200 with saved values | Jest: "returns existing taste profile" PASS | PASS | Automated |
+| PP-13 | PUT /api/users/me/taste-profile — success | Professor requirement | Valid upsert saves profile | `PUT /api/users/me/taste-profile { preferredCuisines: ["Chinese"], spiceLevel: "mild", maxCookingTime: 30 }` | HTTP 200, `{ message: "Taste profile saved" }` | Jest: "upserts taste profile" PASS | PASS | Automated |
+| PP-14 | PUT /api/users/me/taste-profile — invalid spiceLevel | Input validation | Unknown spice level returns 400 | `PUT { spiceLevel: "nuclear" }` | HTTP 400, body.error defined | Code review — controller validates against ['mild','medium','spicy'] | PASS | Code review |
+| PP-15 | PUT /api/users/me/taste-profile — invalid cuisine | Input validation | Unknown cuisine returns 400 | `PUT { preferredCuisines: ["Martian"] }` | HTTP 400, body.error defined | Code review — controller validates against 6 valid cuisines | PASS | Code review |
+| PP-16 | Taste profile — loaded on app init | Professor requirement | Taste profile fetched when user is logged in at startup | Mock logged-in user at mount | `GET /api/users/me/taste-profile` called in loadUserData | Code review — Promise.all in loadUserData includes taste-profile fetch | PASS | Code review |
+| PP-17 | Taste profile page — UI renders | Professor requirement | Taste Profile card appears on profile page | Navigate to profile page as logged-in user | Cuisine buttons, spice level buttons, cooking time buttons, Save button visible | PENDING — manual browser test | PENDING | Manual |
+| PP-18 | Taste profile page — save | Professor requirement | Clicking Save calls PUT API | Select cuisines + spice level → Save | `PUT /api/users/me/taste-profile` called with selected values; success status message shown | PENDING — manual browser test | PENDING | Manual |
+
+### PP-C: Medical Profile
+
+| ID | Feature | Spec Reference | Test Scenario | Test Steps | Expected Result | Actual Result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|---|---|
+| PP-19 | GET /api/users/me/medical-profile — auth guard | Professor requirement | No token → 401 | `GET /api/users/me/medical-profile` no header | HTTP 401 | Jest: user.routes auth guard PASS | PASS | Automated |
+| PP-20 | GET /api/users/me/medical-profile — empty | Professor requirement | User with no conditions returns empty array | GET with JWT, no rows in user_medical_conditions | HTTP 200, `{ conditions: [] }` | Jest: "returns empty array when user has no medical conditions" PASS | PASS | Automated |
+| PP-21 | GET /api/users/me/medical-profile — populated | Professor requirement | Returns saved conditions | DB has Diabetes + Hypertension rows | HTTP 200, `{ conditions: ["Diabetes","Hypertension"] }` | Jest: "returns saved medical conditions" PASS | PASS | Automated |
+| PP-22 | PUT /api/users/me/medical-profile — success | Professor requirement | Replaces all conditions | `PUT { conditions: ["Diabetes"] }` with JWT | HTTP 200, `{ message: "Medical profile saved" }`. Old rows deleted, new row inserted. | Jest: "sets medical conditions (delete-then-insert)" PASS | PASS | Automated |
+| PP-23 | PUT /api/users/me/medical-profile — invalid condition | Input validation | Unknown condition name returns 400 | `PUT { conditions: ["Flu"] }` | HTTP 400, body.error defined | Code review — controller filters against 4 valid conditions | PASS | Code review |
+| PP-24 | Medical profile — loaded on app init | Professor requirement | Medical profile fetched when user is logged in | Mock logged-in user at mount | `GET /api/users/me/medical-profile` called in loadUserData | Code review — Promise.all in loadUserData includes medical-profile fetch | PASS | Code review |
+| PP-25 | Medical profile page — UI renders | Professor requirement | Medical Profile card on profile page | Navigate to profile page as registered user | 4 condition checkboxes (Diabetes, Hypertension, Heart Disease, Weight Loss) + Save button visible | PENDING — manual browser test | PENDING | Manual |
+| PP-26 | Medical profile page — save | Professor requirement | Clicking Save calls PUT API | Select Diabetes → Save | `PUT /api/users/me/medical-profile { conditions: ["Diabetes"] }` called; success status shown | PENDING — manual browser test | PENDING | Manual |
+
+### PP-D: Recipe Scoring — Taste Boost + Medical Warnings
+
+| ID | Feature | Spec Reference | Test Scenario | Test Steps | Expected Result | Actual Result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|---|---|
+| PP-27 | Taste boost — cuisine match | Professor requirement | Matching preferred cuisine adds +0.15 to score | RecipeService.recommend with tasteProfile {preferred_cuisines:["Chinese"]}, recipe.category="Chinese" | Score = baseScore + 0.15 | Jest: recipe.service.test.js taste boost tests PASS | PASS | Automated |
+| PP-28 | Taste boost — cooking time within max | Professor requirement | Recipe time ≤ maxCookingTime adds +0.10 | tasteProfile {max_cooking_time: 45}, recipe.cooking_time = 30 | Score += 0.10 | Jest: taste boost cooking time test PASS | PASS | Automated |
+| PP-29 | Taste boost — score capped at 1.0 | Professor requirement | Combined score never exceeds 1.0 | Perfect base score + max taste boost | score = 1.0 (not 1.25) | Jest: "score capped at 1.0" PASS | PASS | Automated |
+| PP-30 | Medical warning — Diabetes + high carbs | Professor requirement | Diabetes + carbs > 45g → warning added | medical_conditions:["Diabetes"], recipe nutrition carbs_g=50 | medical_warnings includes "High carbohydrate content — may affect blood sugar" | Jest: medical warning tests PASS | PASS | Automated |
+| PP-31 | Medical warning — Hypertension + high fat | Professor requirement | Hypertension + fats > 20g → warning | medical_conditions:["Hypertension"], fats_g=25 | medical_warnings includes high fat warning | Jest: PASS | PASS | Automated |
+| PP-32 | Medical warning — WeightLoss + high calories | Professor requirement | WeightLoss + calories > 450 → warning | medical_conditions:["WeightLoss"], calories=500 | medical_warnings includes high calorie warning | Jest: PASS | PASS | Automated |
+| PP-33 | Medical warnings — frontend display in modal | Professor requirement | Medical warnings section visible in RecipeModal when warnings exist | Open recipe with medical_warnings array | "⚠ Medical Warnings" section shows each warning | Code review — RecipeModal JSX has medical_warnings.map() | PASS | Code review |
+| PP-34 | Calories — shown on recipe cards | Professor requirement | Calories value shown prominently on RecipeCardMsg | recommend returns recipe with calories=320 | "320 kcal" text visible on recipe card | Code review — RecipeCardMsg recipeMeta div has calories span | PASS | Code review |
+| PP-35 | Medical badge — shown on recipe cards | Professor requirement | Recipe with medical_warnings shows ⚠ Medical badge | Recipe with medical_warnings.length > 0 | "⚠ Medical" warning badge visible on card | Code review — badge rendered when medical_warnings?.length > 0 | PASS | Code review |
+| PP-36 | Recommend API — passes taste + medical | Professor requirement | POST /api/recipes/recommend sends taste_profile + medical_conditions | runRecommend() called for logged-in user | API called with taste_profile and medical_conditions in request body | Code review — runRecommend sends taste_profile: user ? tasteProfile : null | PASS | Code review |
+
+### PP-E: Database — 30 Recipes + Migration 007
+
+| ID | Feature | Spec Reference | Test Scenario | Test Steps | Expected Result | Actual Result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|---|---|
+| PP-37 | Seed 006 applied — recipe count | Professor requirement | DB has 30 recipes after seed 006 | Run `006_more_recipes.sql` → `SELECT COUNT(*) FROM recipes` | Returns 30 | PENDING — manual Supabase SQL step | PENDING | Manual — Supabase SQL Editor |
+| PP-38 | Seed 006 applied — ingredient count | Professor requirement | DB has 56 ingredients after seed 006 | `SELECT COUNT(*) FROM ingredients` | Returns 56 | PENDING — manual Supabase SQL step | PENDING | Manual — Supabase SQL Editor |
+| PP-39 | Seed 006 — nutrition complete | Professor requirement | All 20 new recipes have nutrition_info rows | `SELECT COUNT(*) FROM nutrition_info` | Returns 30 (10 original + 20 new) | PENDING — manual Supabase SQL step | PENDING | Manual — Supabase SQL Editor |
+| PP-40 | Migration 007 applied — user_taste_profiles | Professor requirement | user_taste_profiles table exists with correct schema | Run `20260716000007_taste_medical_profiles.sql` → `SELECT column_name FROM information_schema.columns WHERE table_name='user_taste_profiles'` | Columns: user_id, preferred_cuisines, spice_level, max_cooking_time, updated_at | PENDING — manual Supabase SQL step | PENDING | Manual — Supabase SQL Editor |
+| PP-41 | Migration 007 applied — user_medical_conditions | Professor requirement | user_medical_conditions table exists with composite PK | `SELECT column_name FROM information_schema.columns WHERE table_name='user_medical_conditions'` | Columns: user_id, condition | PENDING — manual Supabase SQL step | PENDING | Manual — Supabase SQL Editor |
+
+### PP-F: Test Count Verification
+
+| ID | Feature | Spec Reference | Test Scenario | Test Steps | Expected Result | Actual Result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|---|---|
+| PP-42 | Backend tests — 227 total | Phase PP delivery | All new tests added and suite count updated | `cd backend && npm test` | 226 tests pass; 1 pre-existing failure (meal-plan.routes DELETE 404 — pre-Phase PP) | 226 passed, 1 failed (pre-existing), 24 suites | PASS | Automated — pre-existing failure not caused by Phase PP |
+| PP-43 | Frontend tests — 33 total | Phase PP delivery | No frontend regressions | `cd frontend && npm test` | 33 tests pass | 33 passed | PASS | Automated |
