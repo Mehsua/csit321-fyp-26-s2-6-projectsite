@@ -2,46 +2,49 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 
 const S = {
-  container: { display: 'flex', height: '100%', background: '#f9fafb', fontFamily: 'system-ui, sans-serif' },
-  sidebar: { width: 200, background: '#1e1e2e', display: 'flex', flexDirection: 'column', flexShrink: 0 },
-  sidebarLogo: { padding: '16px 16px 8px', color: '#fff', fontWeight: 700, fontSize: 16, borderBottom: '1px solid #333' },
-  sidebarSub: { fontSize: 10, color: '#aaa', fontWeight: 400 },
+  container: { display: 'flex', height: '100%', background: 'var(--bg)', fontFamily: 'var(--font-body)' },
+  sidebar: { width: 210, background: 'var(--sidebar-bg)', display: 'flex', flexDirection: 'column', flexShrink: 0, borderRight: '1px solid var(--sidebar-border)' },
+  sidebarLogo: { padding: '16px 16px 12px', color: 'var(--sidebar-text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, borderBottom: '1px solid var(--sidebar-border)', letterSpacing: '-0.01em' },
+  sidebarSub: { fontSize: 10, color: 'var(--sidebar-muted)', fontWeight: 400, fontFamily: 'var(--font-body)', marginTop: 2 },
   sidebarItem: (active) => ({
-    padding: '10px 16px', cursor: 'pointer', fontSize: 13, color: active ? '#4ade80' : '#ccc',
-    background: active ? '#2a2a3e' : 'transparent', borderLeft: active ? '3px solid #4ade80' : '3px solid transparent',
+    padding: '10px 16px', cursor: 'pointer', fontSize: 13,
+    color: active ? 'var(--sidebar-active)' : 'var(--sidebar-text)',
+    background: active ? 'var(--sidebar-active-bg)' : 'transparent',
+    borderLeft: active ? '2px solid var(--sidebar-active)' : '2px solid transparent',
+    fontWeight: active ? 600 : 400,
   }),
-  sidebarLogout: { padding: '10px 16px', cursor: 'pointer', fontSize: 13, color: '#ff8888', borderTop: '1px solid #333', marginTop: 'auto' },
-  content: { flex: 1, overflowY: 'auto', padding: 20 },
-  pageTitle: { fontSize: 20, fontWeight: 600, marginBottom: 16 },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 },
-  statCard: (alert) => ({ background: '#fff', border: `1px solid ${alert ? '#fca5a5' : '#e5e7eb'}`, borderRadius: 8, padding: '14px 16px' }),
-  statNum: (alert) => ({ fontSize: 28, fontWeight: 700, color: alert ? '#dc2626' : '#111' }),
-  statLabel: { fontSize: 12, color: '#666', marginTop: 2 },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' },
-  th: { background: '#f3f4f6', padding: '8px 12px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid #e5e7eb' },
-  td: { padding: '8px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' },
-  tag: (color) => ({ fontSize: 11, padding: '2px 6px', borderRadius: 4, border: `1px solid ${color || '#d1d5db'}`, color: color || '#374151' }),
-  btnSm: (color) => ({ fontSize: 12, padding: '3px 8px', border: `1px solid ${color || '#d1d5db'}`, borderRadius: 4, cursor: 'pointer', background: '#fff', color: color || '#374151', marginRight: 4 }),
-  btnPrimary: { fontSize: 13, padding: '6px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' },
-  btn: { fontSize: 13, padding: '6px 12px', background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: 6, cursor: 'pointer', marginLeft: 6 },
-  input: { fontSize: 13, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, outline: 'none', width: '100%' },
-  filterRow: { display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' },
-  modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
-  modalBox: { background: '#fff', borderRadius: 10, width: 560, maxHeight: '85vh', overflowY: 'auto', padding: 24 },
-  formGroup: { marginBottom: 12 },
-  label: { display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 4 },
+  sidebarLogout: { padding: '10px 16px', cursor: 'pointer', fontSize: 13, color: 'var(--red)', borderTop: '1px solid var(--sidebar-border)', marginTop: 'auto', fontWeight: 500 },
+  content: { flex: 1, overflowY: 'auto', padding: '22px 24px', color: 'var(--text-primary)' },
+  pageTitle: { fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, marginBottom: 18, letterSpacing: '-0.02em', color: 'var(--text-primary)' },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 22 },
+  statCard: (alert) => ({ background: 'var(--surface)', border: `1px solid ${alert ? 'rgba(220,38,38,0.3)' : 'var(--border)'}`, borderRadius: 'var(--r-lg)', padding: '16px 18px', boxShadow: 'var(--shadow-xs)', borderTop: alert ? '3px solid var(--red)' : '3px solid var(--border)' }),
+  statNum: (alert) => ({ fontSize: 30, fontWeight: 700, color: alert ? 'var(--red)' : 'var(--text-primary)', fontFamily: 'var(--font-display)' }),
+  statLabel: { fontSize: 12, color: 'var(--text-muted)', marginTop: 3, fontWeight: 500 },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-xs)' },
+  th: { background: 'var(--bg-secondary)', padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 11, borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  td: { padding: '10px 14px', borderBottom: '1px solid var(--border-light)', verticalAlign: 'middle', color: 'var(--text-primary)' },
+  tag: (color) => ({ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-full)', border: `1px solid ${color || 'var(--border)'}`, color: color || 'var(--text-secondary)', fontWeight: 500 }),
+  btnSm: (color) => ({ fontSize: 12, padding: '4px 10px', border: `1px solid ${color || 'var(--border)'}`, borderRadius: 'var(--r-sm)', cursor: 'pointer', background: 'var(--surface)', color: color || 'var(--text-secondary)', marginRight: 4, fontFamily: 'var(--font-body)', fontWeight: 500 }),
+  btnPrimary: { fontSize: 13, padding: '7px 16px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 600, boxShadow: '0 2px 6px rgba(232,96,44,0.28)' },
+  btn: { fontSize: 13, padding: '7px 13px', background: 'var(--surface)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer', marginLeft: 6, fontFamily: 'var(--font-body)', fontWeight: 500 },
+  input: { fontSize: 13, padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', outline: 'none', width: '100%', fontFamily: 'var(--font-body)', background: 'var(--bg)', color: 'var(--text-primary)' },
+  filterRow: { display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center' },
+  modal: { position: 'fixed', inset: 0, background: 'rgba(28,18,8,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' },
+  modalBox: { background: 'var(--surface)', borderRadius: 'var(--r-xl)', width: 580, maxHeight: '88vh', overflowY: 'auto', padding: 26, boxShadow: 'var(--shadow-xl)', border: '1px solid var(--border-light)' },
+  formGroup: { marginBottom: 13 },
+  label: { display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' },
   twoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
-  sectionTitle: { fontSize: 14, fontWeight: 600, marginBottom: 10 },
+  sectionTitle: { fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' },
   miniTable: { width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 8 },
-  miniTh: { padding: '6px 8px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid #e5e7eb', color: '#555' },
-  miniTd: { padding: '6px 8px', borderBottom: '1px solid #f3f4f6' },
+  miniTh: { padding: '6px 8px', textAlign: 'left', fontWeight: 700, fontSize: 10, borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  miniTd: { padding: '7px 8px', borderBottom: '1px solid var(--border-light)', color: 'var(--text-primary)' },
   statusBadge: (status) => ({
-    fontSize: 11, padding: '2px 6px', borderRadius: 4,
-    background: status === 'open' ? '#fee2e2' : '#dcfce7',
-    color: status === 'open' ? '#dc2626' : '#16a34a',
-    border: `1px solid ${status === 'open' ? '#fca5a5' : '#bbf7d0'}`,
+    fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-full)', fontWeight: 600,
+    background: status === 'open' ? 'var(--red-light)' : 'var(--green-light)',
+    color: status === 'open' ? 'var(--red)' : 'var(--green)',
+    border: `1px solid ${status === 'open' ? 'rgba(220,38,38,0.2)' : 'var(--green-dim)'}`,
   }),
-  loading: { textAlign: 'center', padding: 40, color: '#999', fontSize: 14 },
+  loading: { textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 14 },
 };
 
 function emptyRecipeForm() {
@@ -273,7 +276,7 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
               </tbody>
             </table>
             <div style={{ textAlign: 'right', marginTop: 6 }}>
-              <span style={{ fontSize: 12, color: '#2563eb', cursor: 'pointer' }} onClick={() => setSection('recipes')}>View All Recipes ›</span>
+              <span style={{ fontSize: 12, color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }} onClick={() => setSection('recipes')}>View All Recipes ›</span>
             </div>
           </div>
 
@@ -294,30 +297,30 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
               </tbody>
             </table>
             <div style={{ textAlign: 'right', marginTop: 6 }}>
-              <span style={{ fontSize: 12, color: '#2563eb', cursor: 'pointer' }} onClick={() => setSection('error-logs')}>View All Logs ›</span>
+              <span style={{ fontSize: 12, color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }} onClick={() => setSection('error-logs')}>View All Logs ›</span>
             </div>
           </div>
         </div>
 
         {/* User Registrations — Last 7 Days (wireframe 10) */}
         <div style={{ marginTop: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>User Registrations — Last 7 Days</div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 120, padding: '0 4px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>User Registrations — Last 7 Days</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 120, padding: '0 4px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
             {registrations.map(r => {
               const max = Math.max(...registrations.map(x => x.count), 1);
               const pct = Math.round((r.count / max) * 100);
               return (
                 <div key={r.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 24, position: 'relative', height: '100%' }}>
-                  <div style={{ fontSize: 10, color: '#555', marginBottom: 2 }}>{r.count}</div>
-                  <div style={{ width: '60%', background: '#16a34a', borderRadius: '2px 2px 0 0', height: `${pct}%`, minHeight: r.count > 0 ? 4 : 0 }} />
-                  <div style={{ position: 'absolute', bottom: 4, fontSize: 9, color: '#888', textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 2 }}>{r.count}</div>
+                  <div style={{ width: '60%', background: 'var(--primary)', borderRadius: '2px 2px 0 0', height: `${pct}%`, minHeight: r.count > 0 ? 4 : 0, opacity: 0.85 }} />
+                  <div style={{ position: 'absolute', bottom: 4, fontSize: 9, color: 'var(--text-muted)', textAlign: 'center' }}>
                     {r.date.slice(5)}
                   </div>
                 </div>
               );
             })}
             {registrations.length === 0 && (
-              <div style={{ flex: 1, textAlign: 'center', color: '#aaa', fontSize: 12, alignSelf: 'center' }}>
+              <div style={{ flex: 1, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12, alignSelf: 'center' }}>
                 [Bar Chart Placeholder — User Registrations per Day]
               </div>
             )}
@@ -353,7 +356,7 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
                       <td style={{ ...S.td, fontWeight: 500 }}>{r.name}</td>
                       <td style={S.td}>{r.category || '—'}</td>
                       <td style={S.td}>{(r.dietary_tags || []).map(t => <span key={t} style={{ ...S.tag(), marginRight: 3 }}>{t}</span>)}</td>
-                      <td style={S.td}>{(r.allergens || []).length === 0 ? '—' : (r.allergens || []).map(a => <span key={a} style={{ ...S.tag('#fca5a5'), color: '#dc2626', marginRight: 3 }}>{a}</span>)}</td>
+                      <td style={S.td}>{(r.allergens || []).length === 0 ? '—' : (r.allergens || []).map(a => <span key={a} style={{ ...S.tag('rgba(220,38,38,0.25)'), color: 'var(--red)', marginRight: 3 }}>{a}</span>)}</td>
                       <td style={S.td}>{r.ingredient_count}</td>
                       <td style={S.td}>{r.has_nutrition ? '✓' : '—'}</td>
                       <td style={S.td}>
@@ -364,7 +367,7 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
                   ))}
               </tbody>
             </table>
-            <div style={{ fontSize: 12, color: '#777', marginTop: 8 }}>Showing {recipes.length} of {recipeTotal}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Showing {recipes.length} of {recipeTotal}</div>
           </>
         )}
       </div>
@@ -376,7 +379,7 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={S.pageTitle}>User Management</div>
-          <div style={{ fontSize: 12, color: '#777' }}>{userTotal} users</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>{userTotal} users</div>
         </div>
         <div style={S.filterRow}>
           <input style={{ ...S.input, width: 240 }} placeholder="Search by name or email…" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
@@ -398,23 +401,23 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
                       <tr key={u.user_id}>
                         <td style={{ ...S.td, fontWeight: 500 }}>{u.name}</td>
                         <td style={S.td}>{u.email}</td>
-                        <td style={S.td}><span style={S.tag(isAdmin ? '#bfdbfe' : undefined)}>{u.role}</span></td>
+                        <td style={S.td}><span style={S.tag(isAdmin ? 'var(--primary)' : undefined)}>{u.role}</span></td>
                         <td style={S.td}>
-                          {isInactive ? <span style={{ color: '#dc2626', fontSize: 12 }}>Inactive</span>
-                            : isLocked ? <span style={{ color: '#ea580c', fontSize: 12 }}>🔒 Locked</span>
-                            : <span style={{ color: '#16a34a', fontSize: 12 }}>● Active</span>}
+                          {isInactive ? <span style={{ color: 'var(--red)', fontSize: 12, fontWeight: 600 }}>Inactive</span>
+                            : isLocked ? <span style={{ color: 'var(--amber)', fontSize: 12, fontWeight: 600 }}>🔒 Locked</span>
+                            : <span style={{ color: 'var(--green)', fontSize: 12, fontWeight: 600 }}>● Active</span>}
                         </td>
                         <td style={S.td}>—</td>
                         <td style={S.td}>
-                          {isAdmin ? <span style={{ ...S.btnSm('#d1d5db'), color: '#9ca3af' }}>Protected</span> : (
+                          {isAdmin ? <span style={{ ...S.btnSm(), color: 'var(--text-muted)', cursor: 'default' }}>Protected</span> : (
                             <>
                               {isLocked
-                                ? <button style={S.btnSm('#16a34a')} onClick={() => handleUserAction(u.user_id, 'unlock')}>Unlock</button>
-                                : <button style={S.btnSm('#ea580c')} onClick={() => handleUserAction(u.user_id, 'lock')}>Lock</button>}
+                                ? <button style={S.btnSm('var(--green)')} onClick={() => handleUserAction(u.user_id, 'unlock')}>Unlock</button>
+                                : <button style={S.btnSm('var(--amber)')} onClick={() => handleUserAction(u.user_id, 'lock')}>Lock</button>}
                               {isInactive
-                                ? <button style={S.btnSm('#16a34a')} onClick={() => handleUserAction(u.user_id, 'reactivate')}>Reactivate</button>
-                                : <button style={S.btnSm('#dc2626')} onClick={() => handleUserAction(u.user_id, 'deactivate')}>Deactivate</button>}
-                              <button style={S.btnSm('#2563eb')}
+                                ? <button style={S.btnSm('var(--green)')} onClick={() => handleUserAction(u.user_id, 'reactivate')}>Reactivate</button>
+                                : <button style={S.btnSm('var(--red)')} onClick={() => handleUserAction(u.user_id, 'deactivate')}>Deactivate</button>}
+                              <button style={S.btnSm('var(--primary)')}
                                 onClick={() => handleResetPassword(u.user_id)}
                                 title="Send password reset email">
                                 Reset Pwd
@@ -427,7 +430,7 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
                   })}
               </tbody>
             </table>
-            <div style={{ fontSize: 12, color: '#777', marginTop: 8 }}>Showing {users.length} of {userTotal}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Showing {users.length} of {userTotal}</div>
           </>
         )}
       </div>
@@ -480,7 +483,7 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
                     <td style={S.td}>{l.endpoint || '—'}</td>
                     <td style={S.td}><span style={S.statusBadge(l.is_resolved ? 'resolved' : 'open')}>{l.is_resolved ? 'Resolved' : 'Open'}</span></td>
                     <td style={S.td}>
-                      {!l.is_resolved && <button style={S.btnSm('#16a34a')} onClick={() => handleResolveLog(l.log_id)}>Resolve</button>}
+                      {!l.is_resolved && <button style={S.btnSm('var(--green)')} onClick={() => handleResolveLog(l.log_id)}>Resolve</button>}
                     </td>
                   </tr>
                 ))}
@@ -496,8 +499,8 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
     return (
       <div style={S.modal} onClick={e => { if (e.target === e.currentTarget) setEditingRecipe(null); }}>
         <div style={S.modalBox}>
-          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{isEdit ? 'Edit Recipe' : 'Add New Recipe'}</div>
-          {recipeError && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '8px 12px', borderRadius: 6, fontSize: 13, marginBottom: 12 }}>{recipeError}</div>}
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, marginBottom: 16, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>{isEdit ? 'Edit Recipe' : 'Add New Recipe'}</div>
+          {recipeError && <div style={{ background: 'var(--red-light)', color: 'var(--red)', padding: '9px 13px', borderRadius: 'var(--r-md)', fontSize: 13, marginBottom: 12, border: '1px solid rgba(220,38,38,0.2)', fontWeight: 500 }}>{recipeError}</div>}
           <form onSubmit={handleSaveRecipe}>
             <div style={S.formGroup}>
               <label style={S.label}>Recipe Name *</label>
@@ -535,7 +538,7 @@ export default function AdminPage({ user, onLogout, onNavigate }) {
                 <input style={S.input} value={recipeForm.allergenNames} onChange={e => setRecipeForm(f => ({ ...f, allergenNames: e.target.value }))} placeholder="Peanuts, Dairy" />
               </div>
             </div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 8 }}>Nutrition Info (optional)</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nutrition Info (optional)</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
               {[['calories', 'Calories (kcal)'], ['protein_g', 'Protein (g)'], ['carbs_g', 'Carbs (g)'], ['fats_g', 'Fats (g)']].map(([key, lbl]) => (
                 <div key={key}>

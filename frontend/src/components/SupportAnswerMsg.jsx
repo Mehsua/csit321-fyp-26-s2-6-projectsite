@@ -1,58 +1,60 @@
 export default function SupportAnswerMsg({ matched, question, answer, category, escalated, contactInfo, onEscalate }) {
-  const faqStyle = {
-    padding: '12px 16px',
-    background: '#f0f7ff',
-    borderRadius: 12,
-    border: '1px solid #cce4ff',
+  const bubble = {
+    padding: '14px 16px',
+    borderRadius: '18px 18px 18px 4px',
     fontSize: 14,
-    lineHeight: 1.5,
+    lineHeight: 1.65,
+    background: 'var(--surface)',
+    boxShadow: 'var(--shadow-sm)',
+    border: '1px solid var(--border-light)',
+    maxWidth: '72%',
   };
-  const noMatchStyle = {
-    padding: '12px 16px',
-    background: '#fff9e6',
-    borderRadius: 12,
-    border: '1px solid #ffe082',
-    fontSize: 14,
-  };
+
   const escalateBtn = {
-    marginTop: 10,
+    marginTop: 12,
     fontSize: 13,
-    padding: '6px 14px',
-    background: '#f57c00',
+    padding: '7px 16px',
+    background: 'var(--primary)',
     color: '#fff',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--r-md)',
     cursor: 'pointer',
+    fontFamily: 'var(--font-body)',
+    fontWeight: 600,
+    boxShadow: '0 2px 6px rgba(232,96,44,0.28)',
   };
+
   const linkBtn = {
     fontSize: 13,
-    color: '#0070f3',
+    color: 'var(--primary)',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
     padding: 0,
-    textDecoration: 'underline',
+    fontWeight: 600,
+    fontFamily: 'var(--font-body)',
   };
-  const confirmedStyle = { marginTop: 8, fontSize: 13, color: '#388e3c' };
 
   if (matched) {
     return (
-      <div style={faqStyle}>
+      <div style={bubble}>
         {category && (
-          <div style={{ fontSize: 11, color: '#666', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
             {category}
           </div>
         )}
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>{question}</div>
-        <div style={{ color: '#333' }}>{answer}</div>
-        <div style={{ marginTop: 12 }}>
+        <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)', fontSize: 14 }}>{question}</div>
+        <div style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>{answer}</div>
+        <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--border-light)' }}>
           {!escalated ? (
-            <>
-              <span style={{ color: '#666', fontSize: 13 }}>Still not resolved? </span>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              Still not resolved?{' '}
               <button style={linkBtn} onClick={onEscalate}>Contact support →</button>
-            </>
+            </span>
           ) : (
-            <div style={confirmedStyle}>✓ Request submitted. Contact: {contactInfo || 'support@foodbot.com'}</div>
+            <div style={{ fontSize: 13, color: 'var(--green)', fontWeight: 600 }}>
+              ✓ Request submitted. We'll reach you at: <span style={{ fontWeight: 400 }}>{contactInfo || 'support@foodbot.com'}</span>
+            </div>
           )}
         </div>
       </div>
@@ -60,14 +62,16 @@ export default function SupportAnswerMsg({ matched, question, answer, category, 
   }
 
   return (
-    <div style={noMatchStyle}>
-      <div style={{ color: '#333', marginBottom: 10 }}>
-        I couldn&apos;t find a specific answer to your question. Would you like to contact our support team?
+    <div style={{ ...bubble, borderLeft: '3px solid var(--amber)' }}>
+      <div style={{ color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.65 }}>
+        I couldn&apos;t find a specific answer to your question. Would you like to contact our support team directly?
       </div>
       {!escalated ? (
         <button style={escalateBtn} onClick={onEscalate}>Contact Support</button>
       ) : (
-        <div style={confirmedStyle}>✓ Request submitted. Contact: {contactInfo || 'support@foodbot.com'}</div>
+        <div style={{ fontSize: 13, color: 'var(--green)', fontWeight: 600 }}>
+          ✓ Request submitted. We'll reach you at: <span style={{ fontWeight: 400 }}>{contactInfo || 'support@foodbot.com'}</span>
+        </div>
       )}
     </div>
   );

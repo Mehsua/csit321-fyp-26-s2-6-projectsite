@@ -40,72 +40,83 @@ function adaptRecipe(r) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const S = {
-  app: { display: "flex", flexDirection: "column", height: "100vh", fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 14, color: "#1a1a1a", background: "#fff" },
-  topbar: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: 48, borderBottom: "1px solid #e5e5e5", flexShrink: 0, background: "#fff" },
-  logo: { display: "flex", alignItems: "center", gap: 8, fontWeight: 600, fontSize: 16 },
-  logoIcon: { width: 28, height: 28, background: "#16a34a", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 700 },
-  topRight: { display: "flex", gap: 8, alignItems: "center" },
-  btn: { padding: "5px 12px", borderRadius: 6, border: "1px solid #e5e5e5", background: "#fff", cursor: "pointer", fontSize: 13, color: "#555" },
-  btnPrimary: { padding: "5px 12px", borderRadius: 6, border: "none", background: "#16a34a", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 500 },
-  btnDanger: { padding: "5px 10px", borderRadius: 6, border: "none", background: "#fee2e2", color: "#dc2626", cursor: "pointer", fontSize: 12 },
+  app: { display: "flex", flexDirection: "column", height: "100vh", fontFamily: "var(--font-body)", fontSize: 14, color: "var(--text-primary)", background: "var(--bg)" },
+
+  topbar: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: 54, borderBottom: "1px solid var(--border)", flexShrink: 0, background: "var(--surface)", boxShadow: "var(--shadow-xs)" },
+  logo: { display: "flex", alignItems: "center", gap: 9, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color: "var(--text-primary)", cursor: "pointer", letterSpacing: "-0.01em", userSelect: "none" },
+  logoIcon: { width: 34, height: 34, background: "var(--primary)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 17, fontWeight: 700, flexShrink: 0, boxShadow: "0 2px 10px rgba(232,96,44,0.45)" },
+  topRight: { display: "flex", gap: 6, alignItems: "center" },
+  btn: { padding: "6px 13px", borderRadius: "var(--r-md)", border: "1px solid var(--border)", background: "var(--surface)", cursor: "pointer", fontSize: 13, color: "var(--text-secondary)", fontFamily: "var(--font-body)", fontWeight: 500 },
+  btnPrimary: { padding: "6px 14px", borderRadius: "var(--r-md)", border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "var(--font-body)", boxShadow: "0 2px 8px rgba(232,96,44,0.30)" },
+  btnDanger: { padding: "5px 10px", borderRadius: "var(--r-sm)", border: "none", background: "var(--red-light)", color: "var(--red)", cursor: "pointer", fontSize: 12, fontFamily: "var(--font-body)", fontWeight: 500 },
+
   body: { display: "flex", flex: 1, overflow: "hidden" },
-  sidebar: { width: 240, borderRight: "1px solid #e5e5e5", display: "flex", flexDirection: "column", background: "#fafafa", flexShrink: 0 },
-  sidebarTop: { padding: 12, borderBottom: "1px solid #e5e5e5" },
-  newChatBtn: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #e5e5e5", background: "#fff", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 6, color: "#333" },
-  sideSection: { padding: "10px 12px 4px", fontSize: 11, color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" },
-  histItem: (active) => ({ padding: "7px 12px", fontSize: 13, color: active ? "#16a34a" : "#555", cursor: "pointer", background: active ? "#f0fdf4" : "transparent", borderLeft: active ? "2px solid #16a34a" : "2px solid transparent", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }),
-  sideBottom: { marginTop: "auto", padding: 12, borderTop: "1px solid #e5e5e5" },
-  avatar: (color = "#16a34a") => ({ width: 28, height: 28, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#fff", flexShrink: 0 }),
+
+  sidebar: { width: 248, background: "var(--sidebar-bg)", display: "flex", flexDirection: "column", flexShrink: 0, borderRight: "1px solid var(--sidebar-border)" },
+  sidebarTop: { padding: "14px 12px 12px", borderBottom: "1px solid var(--sidebar-border)" },
+  newChatBtn: { width: "100%", padding: "9px 12px", borderRadius: "var(--r-md)", border: "1px solid rgba(255,255,255,0.12)", background: "transparent", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 7, color: "var(--sidebar-text)", fontFamily: "var(--font-body)", fontWeight: 500 },
+  sideSection: { padding: "14px 14px 5px", fontSize: 10, color: "var(--sidebar-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" },
+  histItem: (active) => ({ padding: "8px 14px", fontSize: 13, color: active ? "var(--sidebar-active)" : "var(--sidebar-text)", cursor: "pointer", background: active ? "var(--sidebar-active-bg)" : "transparent", borderLeft: active ? "2px solid var(--sidebar-active)" : "2px solid transparent", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: active ? 600 : 400 }),
+  sideBottom: { marginTop: "auto", padding: "12px", borderTop: "1px solid var(--sidebar-border)" },
+  avatar: (color = "var(--primary)") => ({ width: 30, height: 30, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#fff", flexShrink: 0 }),
+
   main: { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" },
-  messages: { flex: 1, overflowY: "auto", padding: "24px 0" },
-  msgWrap: (isUser) => ({ display: "flex", gap: 10, alignItems: "flex-start", padding: "4px 40px", flexDirection: isUser ? "row-reverse" : "row" }),
-  bubble: (isUser) => ({ maxWidth: "70%", padding: "10px 14px", borderRadius: 12, fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap", background: isUser ? "#16a34a" : "#f4f4f4", color: isUser ? "#fff" : "#1a1a1a" }),
-  recipeCard: { background: "#fff", border: "1px solid #e5e5e5", borderRadius: 12, padding: "12px 14px", marginTop: 6, maxWidth: 380 },
-  recipeTitle: { fontWeight: 600, fontSize: 14, marginBottom: 4 },
-  recipeMeta: { fontSize: 12, color: "#666", marginBottom: 8, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" },
+  messages: { flex: 1, overflowY: "auto", padding: "20px 0 8px" },
+  msgWrap: (isUser) => ({ display: "flex", gap: 10, alignItems: "flex-start", padding: "5px 40px", flexDirection: isUser ? "row-reverse" : "row" }),
+  bubble: (isUser) => ({ maxWidth: "72%", padding: "11px 15px", borderRadius: isUser ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: 14, lineHeight: 1.65, whiteSpace: "pre-wrap", background: isUser ? "var(--primary)" : "var(--surface)", color: isUser ? "#fff" : "var(--text-primary)", boxShadow: isUser ? "0 2px 10px rgba(232,96,44,0.28)" : "var(--shadow-sm)", border: isUser ? "none" : "1px solid var(--border-light)" }),
+
+  recipeCard: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)", padding: "14px 16px", marginTop: 8, maxWidth: 400, boxShadow: "var(--shadow-sm)" },
+  recipeTitle: { fontWeight: 600, fontSize: 14, marginBottom: 5, color: "var(--text-primary)", letterSpacing: "-0.01em" },
+  recipeMeta: { fontSize: 12, color: "var(--text-muted)", marginBottom: 10, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" },
   badge: (type) => {
-    const map = { match: ["#f0fdf4", "#16a34a"], warn: ["#fffbeb", "#d97706"], info: ["#eff6ff", "#2563eb"], red: ["#fef2f2", "#dc2626"] };
+    const map = { match: ["var(--green-light)", "var(--green)"], warn: ["var(--amber-light)", "var(--amber)"], info: ["var(--blue-light)", "var(--blue)"], red: ["var(--red-light)", "var(--red)"] };
     const [bg, text] = map[type] || map.info;
-    return { fontSize: 11, padding: "2px 7px", borderRadius: 10, background: bg, color: text, fontWeight: 500 };
+    return { fontSize: 11, padding: "2px 8px", borderRadius: "var(--r-full)", background: bg, color: text, fontWeight: 600 };
   },
-  recipeBtns: { display: "flex", gap: 6, flexWrap: "wrap" },
-  recipeBtn: { fontSize: 12, padding: "4px 10px", border: "1px solid #e5e5e5", borderRadius: 6, background: "#fff", cursor: "pointer", color: "#333" },
-  recipeBtnPrimary: { fontSize: 12, padding: "4px 10px", border: "none", borderRadius: 6, background: "#16a34a", color: "#fff", cursor: "pointer" },
-  scoreBar: { height: 4, borderRadius: 2, background: '#e5e5e5', margin: '6px 0', overflow: 'hidden' },
-  scoreFill: (pct) => ({ height: '100%', borderRadius: 2, background: pct >= 70 ? '#16a34a' : pct >= 40 ? '#d97706' : '#dc2626', width: `${pct}%`, transition: 'width 0.3s ease' }),
-  chips: { display: "flex", flexWrap: "wrap", gap: 6, padding: "8px 40px 0" },
-  chip: { fontSize: 12, padding: "5px 12px", border: "1px solid #e5e5e5", borderRadius: 12, background: "#fff", cursor: "pointer", color: "#555" },
-  inputArea: { padding: "12px 40px 20px", borderTop: "1px solid #e5e5e5", flexShrink: 0 },
-  inputWrap: { display: "flex", gap: 8, alignItems: "flex-end", border: "1px solid #d1d5db", borderRadius: 12, padding: "8px 12px", background: "#fff" },
-  textarea: { flex: 1, border: "none", outline: "none", fontSize: 14, resize: "none", fontFamily: "inherit", lineHeight: 1.5, background: "transparent", color: "#1a1a1a" },
-  sendBtn: { width: 34, height: 34, borderRadius: "50%", background: "#16a34a", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  recipeBtns: { display: "flex", gap: 7, flexWrap: "wrap", marginTop: 10 },
+  recipeBtn: { fontSize: 12, padding: "5px 12px", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--surface)", cursor: "pointer", color: "var(--text-secondary)", fontFamily: "var(--font-body)", fontWeight: 500 },
+  recipeBtnPrimary: { fontSize: 12, padding: "5px 12px", border: "none", borderRadius: "var(--r-md)", background: "var(--primary)", color: "#fff", cursor: "pointer", fontFamily: "var(--font-body)", fontWeight: 600, boxShadow: "0 1px 4px rgba(232,96,44,0.25)" },
+  scoreBar: { height: 4, borderRadius: 3, background: "var(--border)", margin: "8px 0 10px", overflow: "hidden" },
+  scoreFill: (pct) => ({ height: "100%", borderRadius: 3, background: pct >= 70 ? "var(--green)" : pct >= 40 ? "var(--amber)" : "var(--red)", width: `${pct}%`, transition: "width 0.4s ease" }),
+
+  chips: { display: "flex", flexWrap: "wrap", gap: 7, padding: "8px 40px 4px" },
+  chip: { fontSize: 12, padding: "6px 14px", border: "1px solid var(--border)", borderRadius: "var(--r-full)", background: "var(--surface)", cursor: "pointer", color: "var(--text-secondary)", fontFamily: "var(--font-body)", fontWeight: 500, whiteSpace: "nowrap" },
+
+  inputArea: { padding: "10px 40px 20px", borderTop: "1px solid var(--border-light)", flexShrink: 0, background: "var(--bg)" },
+  inputWrap: { display: "flex", gap: 10, alignItems: "flex-end", border: "1.5px solid var(--border)", borderRadius: "var(--r-lg)", padding: "10px 12px", background: "var(--surface)", boxShadow: "var(--shadow-xs)" },
+  textarea: { flex: 1, border: "none", outline: "none", fontSize: 14, resize: "none", fontFamily: "var(--font-body)", lineHeight: 1.5, background: "transparent", color: "var(--text-primary)" },
+  sendBtn: { width: 36, height: 36, borderRadius: "50%", background: "var(--primary)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 2px 8px rgba(232,96,44,0.38)" },
+
   // Auth
-  authPage: { display: "flex", flex: 1, alignItems: "center", justifyContent: "center", background: "#fafafa" },
-  authCard: { background: "#fff", border: "1px solid #e5e5e5", borderRadius: 16, padding: 32, width: 360 },
-  authTitle: { fontSize: 20, fontWeight: 600, marginBottom: 4 },
-  authSub: { fontSize: 13, color: "#666", marginBottom: 24 },
+  authPage: { display: "flex", flex: 1, alignItems: "center", justifyContent: "center", background: "var(--bg-secondary)" },
+  authCard: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", overflow: "hidden", width: 390, boxShadow: "var(--shadow-lg)" },
+  authTitle: { fontSize: 22, fontWeight: 700, marginBottom: 4, fontFamily: "var(--font-display)", color: "#fff", letterSpacing: "-0.02em" },
+  authSub: { fontSize: 13, color: "rgba(255,255,255,0.75)", marginBottom: 0 },
   formGroup: { marginBottom: 16 },
-  label: { display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "#333" },
-  input: { width: "100%", padding: "8px 12px", border: "1px solid #e5e5e5", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" },
-  formBtn: { width: "100%", padding: "10px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", marginTop: 4 },
-  formLink: { fontSize: 13, color: "#16a34a", textAlign: "center", marginTop: 12, cursor: "pointer" },
+  label: { display: "block", fontSize: 11, fontWeight: 700, marginBottom: 6, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" },
+  input: { width: "100%", padding: "10px 13px", border: "1px solid var(--border)", borderRadius: "var(--r-md)", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "var(--font-body)", background: "var(--bg)", color: "var(--text-primary)" },
+  formBtn: { width: "100%", padding: "11px", borderRadius: "var(--r-md)", border: "none", background: "var(--primary)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 4, fontFamily: "var(--font-body)", boxShadow: "0 3px 10px rgba(232,96,44,0.32)" },
+  formLink: { fontSize: 13, color: "var(--primary)", textAlign: "center", marginTop: 14, cursor: "pointer", fontWeight: 500 },
+
   // Profile
-  profilePage: { flex: 1, overflowY: "auto", padding: "32px 40px" },
-  profileCard: { background: "#fff", border: "1px solid #e5e5e5", borderRadius: 12, padding: 24, maxWidth: 480, marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: 600, marginBottom: 16 },
-  checkRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 10 },
-  checkBox: (checked) => ({ width: 18, height: 18, borderRadius: 4, border: `2px solid ${checked ? "#16a34a" : "#d1d5db"}`, background: checked ? "#16a34a" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }),
+  profilePage: { flex: 1, overflowY: "auto", padding: "28px 40px", background: "var(--bg)" },
+  profileCard: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)", padding: 24, marginBottom: 18, boxShadow: "var(--shadow-xs)" },
+  sectionTitle: { fontSize: 15, fontWeight: 700, marginBottom: 16, color: "var(--text-primary)", fontFamily: "var(--font-display)", letterSpacing: "-0.01em" },
+  checkRow: { display: "flex", alignItems: "center", gap: 11, marginBottom: 11 },
+  checkBox: (checked) => ({ width: 20, height: 20, borderRadius: 5, border: `2px solid ${checked ? "var(--primary)" : "var(--border)"}`, background: checked ? "var(--primary)" : "var(--surface)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }),
+
   // Admin
-  adminPage: { flex: 1, overflowY: "auto", padding: "24px 32px" },
-  adminHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  table: { width: "100%", borderCollapse: "collapse", background: "#fff", border: "1px solid #e5e5e5", borderRadius: 12, overflow: "hidden" },
-  th: { textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #e5e5e5", fontSize: 12, color: "#666", fontWeight: 600, background: "#fafafa" },
-  td: { padding: "10px 14px", borderBottom: "1px solid #f3f4f6", fontSize: 13, verticalAlign: "top" },
+  adminPage: { flex: 1, overflowY: "auto", padding: "24px 32px", background: "var(--bg)" },
+  adminHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 },
+  table: { width: "100%", borderCollapse: "collapse", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" },
+  th: { textAlign: "left", padding: "11px 16px", borderBottom: "1px solid var(--border)", fontSize: 11, color: "var(--text-muted)", fontWeight: 700, background: "var(--bg-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" },
+  td: { padding: "11px 16px", borderBottom: "1px solid var(--border-light)", fontSize: 13, verticalAlign: "top", color: "var(--text-primary)" },
+
   // Modal
-  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
-  modalCard: { background: "#fff", borderRadius: 16, padding: 28, width: 480, maxHeight: "80vh", overflowY: "auto" },
-  modalTitle: { fontSize: 18, fontWeight: 600, marginBottom: 16 },
-  statusBar: (ok) => ({ padding: "8px 14px", borderRadius: 8, background: ok ? "#f0fdf4" : "#fef3c7", color: ok ? "#16a34a" : "#d97706", fontSize: 12, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }),
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(28,18,8,0.58)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" },
+  modalCard: { background: "var(--surface)", borderRadius: "var(--r-xl)", padding: 30, width: 520, maxHeight: "88vh", overflowY: "auto", boxShadow: "var(--shadow-xl)", border: "1px solid var(--border-light)" },
+  modalTitle: { fontSize: 20, fontWeight: 700, marginBottom: 18, fontFamily: "var(--font-display)", color: "var(--text-primary)", letterSpacing: "-0.02em" },
+  statusBar: (ok) => ({ padding: "9px 14px", borderRadius: "var(--r-md)", background: ok ? "var(--green-light)" : "var(--amber-light)", color: ok ? "var(--green)" : "var(--amber)", fontSize: 12, marginBottom: 13, display: "flex", alignItems: "center", gap: 7, fontWeight: 600 }),
 };
 
 // ─── Components ───────────────────────────────────────────────────────────────
@@ -117,7 +128,8 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
   return (
     <div style={S.modalOverlay} role="presentation" onClick={onClose}>
       <div
-        style={{ ...S.modalCard, width: 520 }}
+        style={{ ...S.modalCard, width: 540 }}
+        className="modal-card"
         role="dialog"
         aria-modal="true"
         aria-labelledby="recipe-modal-title"
@@ -258,7 +270,7 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
 function RecipeCardMsg({ recipe, onView, onSave, saved, onAddToList }) {
   const pct = Math.round((recipe.score ?? 0) * 100);
   return (
-    <div style={S.recipeCard}>
+    <div style={S.recipeCard} className="recipe-card card-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
         <div style={S.recipeTitle}>{recipe.name}</div>
         <span style={S.badge(pct === 100 ? "match" : pct >= 60 ? "warn" : "red")}>{pct}%</span>
@@ -876,17 +888,17 @@ export default function App() {
     return (
       <>
         {!user ? (
-          <div style={{ background: '#fffbe6', borderBottom: '1px solid #e0c060', padding: '6px 20px', fontSize: 12, color: '#806000', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <span>ℹ Guest Mode — Sign up to save favourites & preferences</span>
-            <span style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
-              <span style={{ textDecoration: 'underline', cursor: 'pointer' }} onClick={() => setPage('register')}>Sign Up</span>
-              <span style={{ textDecoration: 'underline', cursor: 'pointer' }} onClick={() => setPage('login')}>Login</span>
+          <div style={{ background: "var(--amber-light)", borderBottom: "1px solid rgba(217,119,6,0.2)", padding: "7px 24px", fontSize: 12, color: "var(--amber)", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, fontWeight: 500 }}>
+            <span>ℹ Guest Mode — Sign up to save favourites, preferences & allergen alerts</span>
+            <span style={{ marginLeft: "auto", display: "flex", gap: 14 }}>
+              <span style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }} onClick={() => setPage('register')}>Sign Up</span>
+              <span style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }} onClick={() => setPage('login')}>Login</span>
             </span>
           </div>
         ) : (
-          <div style={{ background: '#e8f5e9', borderBottom: '1px solid #aad0aa', padding: '5px 20px', fontSize: 12, color: '#2a6a2a', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-            <span>✓ {user.name || 'User'} &nbsp;|&nbsp; {user.isAdmin ? 'Admin' : 'Registered'}</span>
-            <span>
+          <div style={{ background: "var(--green-light)", borderBottom: "1px solid rgba(21,128,61,0.15)", padding: "7px 24px", fontSize: 12, color: "var(--green)", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, fontWeight: 500 }}>
+            <span>✓ {user.name || 'User'} &nbsp;·&nbsp; {user.isAdmin ? 'Admin' : 'Registered user'}</span>
+            <span style={{ color: "var(--text-muted)", fontSize: 11 }}>
               {[prefs.halal && 'Halal', prefs.vegetarian && 'Vegetarian', prefs.vegan && 'Vegan', prefs.glutenFree && 'Gluten-Free'].filter(Boolean).join(' · ') || 'No dietary filters'}
               {prefs.allergens.length > 0 ? ` · No ${prefs.allergens.slice(0, 2).join('/')}` : ''}
             </span>
@@ -894,13 +906,17 @@ export default function App() {
         )}
         <div style={S.messages} aria-live="polite" aria-label="Chat messages">
           {messages.length === 0 && (
-            <div style={{ textAlign: "center", padding: "60px 40px" }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🍳</div>
-              <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>What's in your kitchen?</div>
-              <div style={{ fontSize: 14, color: "#666", marginBottom: 28 }}>Enter your ingredients and I'll find recipes. Or ask me anything about cooking.</div>
+            <div className="fade-in" style={{ textAlign: "center", padding: "56px 40px 40px" }}>
+              <div style={{ width: 72, height: 72, borderRadius: 22, background: "var(--primary-light)", border: "2px solid rgba(232,96,44,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 34 }}>🍳</div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700, marginBottom: 10, color: "var(--text-primary)", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+                What's in your kitchen?
+              </div>
+              <div style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.75, maxWidth: 380, margin: "0 auto 30px" }}>
+                Tell me your ingredients — I'll find the best matching recipes, flag allergens, and suggest what to cook tonight.
+              </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
                 {SUGGESTIONS.map(s => (
-                  <button key={s} style={{ ...S.chip, fontSize: 13, padding: "7px 14px" }} onClick={() => sendMessage(s)}>{s}</button>
+                  <button key={s} className="suggestion-chip" style={{ ...S.chip, fontSize: 13, padding: "8px 16px" }} onClick={() => sendMessage(s)}>{s}</button>
                 ))}
               </div>
             </div>
@@ -909,7 +925,7 @@ export default function App() {
           {messages.map((msg, i) => {
             if (msg.type === 'support_answer') {
               return (
-                <div key={i} style={{ padding: '4px 40px' }}>
+                <div key={i} className="msg-in" style={{ padding: '4px 40px' }}>
                   <SupportAnswerMsg
                     matched={msg.matched}
                     question={msg.question}
@@ -924,7 +940,7 @@ export default function App() {
             }
             if (msg.type === 'ingredient_confirm') {
               return (
-                <div key={i} style={{ padding: '4px 40px' }}>
+                <div key={i} className="msg-in" style={{ padding: '4px 40px' }}>
                   <IngredientConfirmMsg
                     ingredients={msg.ingredients}
                     confirmed={msg.confirmed}
@@ -934,10 +950,10 @@ export default function App() {
               );
             }
             return (
-              <div key={i}>
+              <div key={i} className="msg-in">
                 <div style={S.msgWrap(msg.role === "user")}>
-                  <div style={S.avatar(msg.role === "user" ? "#2563eb" : "#16a34a")}>
-                    {msg.role === "user" ? (user?.name?.[0]?.toUpperCase() || "U") : "FB"}
+                  <div style={S.avatar(msg.role === "user" ? "var(--blue)" : "var(--primary)")}>
+                    {msg.role === "user" ? (user?.name?.[0]?.toUpperCase() || "U") : "🍳"}
                   </div>
                   <div style={{ maxWidth: "72%" }}>
                     {msg.content && <div style={S.bubble(msg.role === "user")}>{msg.content}</div>}
@@ -955,13 +971,13 @@ export default function App() {
           })}
 
           {loading && messages[messages.length - 1]?.role !== "assistant" && (
-            <div style={S.msgWrap(false)}>
-              <div style={S.avatar("#16a34a")}>FB</div>
-              <div style={{ ...S.bubble(false), color: "#999" }}>
-                <span aria-label="Loading response">
-                  <span className="dot">●</span>
-                  <span className="dot">●</span>
-                  <span className="dot">●</span>
+            <div className="msg-in" style={S.msgWrap(false)}>
+              <div style={S.avatar("var(--primary)")}>🍳</div>
+              <div style={{ ...S.bubble(false), display: "flex", alignItems: "center", padding: "14px 16px" }}>
+                <span aria-label="Loading response" style={{ display: "flex", alignItems: "center" }}>
+                  <span className="dot" />
+                  <span className="dot" />
+                  <span className="dot" />
                 </span>
               </div>
             </div>
@@ -972,13 +988,13 @@ export default function App() {
         {messages.length > 0 && (
           <div style={S.chips}>
             {["Substitute an ingredient", "Make it vegetarian", "Simpler version?", "What pairs well with this?"].map(c => (
-              <button key={c} style={S.chip} onClick={() => sendMessage(c)}>{c}</button>
+              <button key={c} className="suggestion-chip" style={S.chip} onClick={() => sendMessage(c)}>{c}</button>
             ))}
           </div>
         )}
 
         <div style={S.inputArea}>
-          <div style={S.inputWrap}>
+          <div style={S.inputWrap} className="chat-input-wrap">
             <textarea
               ref={textareaRef}
               rows={1}
@@ -988,7 +1004,7 @@ export default function App() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <button type="button" style={S.sendBtn} aria-label="Send message" onClick={() => sendMessage()}>
+            <button type="button" style={S.sendBtn} className="send-btn" aria-label="Send message" onClick={() => sendMessage()}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 8L2 2l2.5 6L2 14l12-6z" fill="#fff" /></svg>
             </button>
           </div>
@@ -1001,7 +1017,7 @@ export default function App() {
     const ALLERGEN_OPTIONS = ["peanuts", "shellfish", "dairy", "egg", "gluten", "soy", "fish"];
     return (
       <div style={S.profilePage}>
-        <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 20 }}>My profile</div>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 700, marginBottom: 24, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>My Profile</div>
         <div style={S.profileCard}>
           <div style={S.sectionTitle}>Account</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -1022,9 +1038,8 @@ export default function App() {
               <span style={{ fontSize: 14, cursor: "pointer" }}>{label}</span>
             </div>
           ))}
-        </div>
-        <div style={S.profileCard}>
-          <div style={S.sectionTitle}>Allergens</div>
+
+          <div style={{ ...S.sectionTitle, marginTop: 20 }}>Allergens</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {ALLERGEN_OPTIONS.map(a => {
               const on = prefs.allergens.includes(a);
@@ -1037,6 +1052,33 @@ export default function App() {
             })}
           </div>
           <div style={{ fontSize: 12, color: "#999", marginTop: 10 }}>Recipes containing these allergens will be filtered out.</div>
+
+          <button
+            style={{ ...S.formBtn, marginTop: 20, background: savePrefsStatus === 'saving' ? '#aaa' : '#16a34a' }}
+            disabled={savePrefsStatus === 'saving'}
+            onClick={async () => {
+              setSavePrefsStatus('saving');
+              try {
+                const dietaryTags = [
+                  prefs.halal && 'Halal',
+                  prefs.vegetarian && 'Vegetarian',
+                  prefs.vegan && 'Vegan',
+                  prefs.glutenFree && 'GlutenFree',
+                ].filter(Boolean);
+                await api.put('/api/users/me/preferences', {
+                  dietaryTags,
+                  allergenNames: prefs.allergens,
+                });
+                setSavePrefsStatus('saved');
+                setTimeout(() => setSavePrefsStatus(null), 2000);
+              } catch {
+                setSavePrefsStatus('error');
+                setTimeout(() => setSavePrefsStatus(null), 3000);
+              }
+            }}
+          >
+            {savePrefsStatus === 'saving' ? 'Saving…' : savePrefsStatus === 'saved' ? '✓ Saved!' : savePrefsStatus === 'error' ? 'Save failed — try again' : 'Save Preferences'}
+          </button>
         </div>
         <div style={S.profileCard}>
           <div style={S.sectionTitle}>Taste Profile</div>
@@ -1152,34 +1194,6 @@ export default function App() {
           </button>
         </div>
         <div style={S.profileCard}>
-          <button
-            style={{ ...S.formBtn, background: savePrefsStatus === 'saving' ? '#aaa' : '#16a34a' }}
-            disabled={savePrefsStatus === 'saving'}
-            onClick={async () => {
-              setSavePrefsStatus('saving');
-              try {
-                const dietaryTags = [
-                  prefs.halal && 'Halal',
-                  prefs.vegetarian && 'Vegetarian',
-                  prefs.vegan && 'Vegan',
-                  prefs.glutenFree && 'GlutenFree',
-                ].filter(Boolean);
-                await api.put('/api/users/me/preferences', {
-                  dietaryTags,
-                  allergenNames: prefs.allergens,
-                });
-                setSavePrefsStatus('saved');
-                setTimeout(() => setSavePrefsStatus(null), 2000);
-              } catch {
-                setSavePrefsStatus('error');
-                setTimeout(() => setSavePrefsStatus(null), 3000);
-              }
-            }}
-          >
-            {savePrefsStatus === 'saving' ? 'Saving…' : savePrefsStatus === 'saved' ? '✓ Saved!' : savePrefsStatus === 'error' ? 'Save failed — try again' : 'Save Preferences'}
-          </button>
-        </div>
-        <div style={S.profileCard}>
           <div style={S.sectionTitle}>Favourites</div>
           {favourites.length === 0
             ? <div style={{ fontSize: 13, color: "#999" }}>No saved recipes yet. Chat to find some!</div>
@@ -1204,8 +1218,8 @@ export default function App() {
     const remaining = 50 - count;
     return (
       <div style={S.profilePage}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <div style={{ fontSize: 20, fontWeight: 600 }}>My Favourites</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>My Favourites</div>
           <span style={{ fontSize: 13, color: '#666' }}>{count} / 50</span>
         </div>
 
@@ -1218,7 +1232,7 @@ export default function App() {
           favourites.map(r => {
             const pct = Math.round((r.score ?? 0) * 100);
             return (
-              <div key={r.id || r.recipe_id} style={{ ...S.recipeCard, marginBottom: 10 }}>
+              <div key={r.id || r.recipe_id} style={{ ...S.recipeCard, maxWidth: "none", marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                   <div style={S.recipeTitle}>{r.name}</div>
                   {pct > 0 && <span style={S.badge(pct >= 70 ? 'match' : pct >= 40 ? 'warn' : 'red')}>{pct}%</span>}
@@ -1251,22 +1265,25 @@ export default function App() {
     return (
       <div style={S.authPage}>
         <div style={S.authCard}>
-          <div style={{ textAlign: "center", marginBottom: 20 }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🍳</div>
+          {/* Gradient header */}
+          <div style={{ background: "linear-gradient(135deg, var(--primary) 0%, #F47C38 100%)", padding: "28px 32px 24px", textAlign: "center" }}>
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 26, backdropFilter: "blur(4px)" }}>🍳</div>
             <div style={S.authTitle}>{isLogin ? "Welcome back" : "Create account"}</div>
             <div style={S.authSub}>{isLogin ? "Sign in to FoodBot" : "Join FoodBot to save recipes"}</div>
           </div>
-          {authError && <div style={{ background: "#fef2f2", color: "#dc2626", padding: "8px 12px", borderRadius: 8, fontSize: 13, marginBottom: 12 }}>{authError}</div>}
+          {/* Form body */}
+          <div style={{ padding: "24px 32px 32px" }}>
+          {authError && <div style={{ background: "var(--red-light)", color: "var(--red)", padding: "10px 13px", borderRadius: "var(--r-md)", fontSize: 13, marginBottom: 16, border: "1px solid rgba(220,38,38,0.15)" }}>{authError}</div>}
           <form onSubmit={isLogin ? handleLogin : handleRegister}>
             {isLogin ? (
               <>
                 <div style={S.formGroup}>
                   <label style={S.label}>Email</label>
-                  <input style={S.input} type="email" placeholder="you@email.com" value={authForm.email} onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))} />
+                  <input className="form-input" style={S.input} type="email" placeholder="you@email.com" value={authForm.email} onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))} />
                 </div>
                 <div style={S.formGroup}>
                   <label style={S.label}>Password</label>
-                  <input style={S.input} type="password" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
+                  <input className="form-input" style={S.input} type="password" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
                 </div>
                 {isLogin && (
                   <div style={{ textAlign: 'right', marginBottom: 8, marginTop: -8 }}>
@@ -1329,17 +1346,177 @@ export default function App() {
                 </div>
               </>
             )}
-            <button type="submit" style={S.formBtn}>{isLogin ? "Sign in" : "Create account"}</button>
+            <button type="submit" className="form-btn" style={S.formBtn}>{isLogin ? "Sign in" : "Create account"}</button>
           </form>
           <div style={S.formLink} onClick={() => { setPage(isLogin ? "register" : "login"); setAuthError(""); }}>
             {isLogin ? "Don't have an account? Register →" : "Already have an account? Sign in →"}
           </div>
           {isLogin && (
-            <div style={{ ...S.formLink, color: '#888', marginTop: 8 }} onClick={() => setPage("chat")}>
+            <div style={{ ...S.formLink, color: 'var(--text-muted)', marginTop: 8 }} onClick={() => setPage("chat")}>
               Continue as Guest
             </div>
           )}
+          </div>{/* end form body */}
         </div>
+      </div>
+    );
+  }
+
+  // ── Auth full-screen layout ───────────────────────────────────────────────
+  if (page === "login" || page === "register") {
+    const isLogin = page === "login";
+    return (
+      <div style={{ display: "flex", height: "100vh", fontFamily: "var(--font-body)", background: "var(--bg)" }}>
+        {/* Left panel — branding */}
+        <div style={{ flex: "0 0 45%", background: "linear-gradient(160deg, #1C0F06 0%, #2E1A0E 60%, var(--primary) 130%)", display: "flex", flexDirection: "column", justifyContent: "center", padding: "60px 56px", position: "relative", overflow: "hidden" }}>
+          {/* Decorative circles */}
+          <div style={{ position: "absolute", top: -80, right: -80, width: 320, height: 320, borderRadius: "50%", background: "rgba(232,96,44,0.12)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", bottom: -60, left: -60, width: 240, height: 240, borderRadius: "50%", background: "rgba(232,96,44,0.08)", pointerEvents: "none" }} />
+          <div style={{ position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 52 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 14, background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, boxShadow: "0 4px 16px rgba(232,96,44,0.4)" }}>🍳</div>
+              <span style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "#fff", letterSpacing: "-0.02em" }}>FoodBot</span>
+            </div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 38, fontWeight: 700, color: "#fff", lineHeight: 1.2, letterSpacing: "-0.03em", marginBottom: 20 }}>
+              Cook smarter<br />with what you have
+            </div>
+            <div style={{ fontSize: 15, color: "rgba(255,255,255,0.6)", lineHeight: 1.75, marginBottom: 40, maxWidth: 340 }}>
+              Tell FoodBot what's in your fridge and get personalised recipe recommendations — instantly.
+            </div>
+            {[
+              ["🥗", "Ingredient-based recipe matching"],
+              ["⚠", "Allergen & dietary filtering"],
+              ["🛒", "Auto-generated shopping lists"],
+            ].map(([icon, text]) => (
+              <div key={text} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{icon}</div>
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right panel — form */}
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", overflowY: "auto", padding: "40px 24px" }}>
+          <div style={{ width: "100%", maxWidth: 420 }}>
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em", marginBottom: 6 }}>
+                {isLogin ? "Welcome back" : "Create your account"}
+              </div>
+              <div style={{ fontSize: 14, color: "var(--text-muted)" }}>
+                {isLogin ? "Sign in to access your recipes and saved lists." : "Join FoodBot — free, no credit card required."}
+              </div>
+            </div>
+
+            {authError && <div style={{ background: "var(--red-light)", color: "var(--red)", padding: "10px 13px", borderRadius: "var(--r-md)", fontSize: 13, marginBottom: 20, border: "1px solid rgba(220,38,38,0.15)", fontWeight: 500 }}>{authError}</div>}
+
+            <form onSubmit={isLogin ? handleLogin : handleRegister}>
+              {isLogin ? (
+                <>
+                  <div style={S.formGroup}>
+                    <label style={S.label}>Email</label>
+                    <input className="form-input" style={S.input} type="email" placeholder="you@email.com" value={authForm.email} onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))} />
+                  </div>
+                  <div style={S.formGroup}>
+                    <label style={S.label}>Password</label>
+                    <input className="form-input" style={S.input} type="password" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
+                  </div>
+                  <div style={{ textAlign: "right", marginBottom: 20, marginTop: -8 }}>
+                    <span style={{ fontSize: 12, color: "var(--primary)", cursor: "pointer", fontWeight: 600 }}
+                      onClick={() => { setShowForgotPwd(true); setForgotMsg(""); setForgotEmail(""); }}>
+                      Forgot password?
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={S.formGroup}>
+                    <label style={S.label}>Full Name</label>
+                    <input className="form-input" style={S.input} placeholder="e.g. John Smith" value={authForm.name} onChange={e => setAuthForm(p => ({ ...p, name: e.target.value }))} />
+                  </div>
+                  <div style={S.formGroup}>
+                    <label style={S.label}>Email Address</label>
+                    <input className="form-input" style={S.input} type="email" placeholder="you@example.com" value={authForm.email} onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))} />
+                  </div>
+                  <div style={S.formGroup}>
+                    <label style={S.label}>Password <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(min. 8 characters)</span></label>
+                    <input className="form-input" style={S.input} type="password" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))} />
+                  </div>
+                  <div style={S.formGroup}>
+                    <label style={S.label}>Confirm Password</label>
+                    <input className="form-input" style={S.input} type="password" placeholder="Re-enter password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                  </div>
+                  <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "20px 0" }} />
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: "var(--text-primary)" }}>Dietary Preferences <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(Optional)</span></div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 0", marginBottom: 4 }}>
+                    {["Halal", "Vegan", "Vegetarian", "Gluten-Free"].map(tag => (
+                      <div key={tag} style={{ ...S.checkRow, minWidth: "50%" }}>
+                        <div style={S.checkBox(regDietaryTags.includes(tag))} onClick={() => setRegDietaryTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}>
+                          {regDietaryTags.includes(tag) && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
+                        </div>
+                        <span style={{ fontSize: 13 }}>{tag}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "16px 0" }} />
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: "var(--text-primary)" }}>Allergen Alerts <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(Optional)</span></div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 0", marginBottom: 4 }}>
+                    {["Peanuts", "Dairy", "Gluten", "Shellfish", "Eggs", "Soy"].map(allergen => (
+                      <div key={allergen} style={{ ...S.checkRow, minWidth: "50%" }}>
+                        <div style={S.checkBox(regAllergens.includes(allergen))} onClick={() => setRegAllergens(prev => prev.includes(allergen) ? prev.filter(a => a !== allergen) : [...prev, allergen])}>
+                          {regAllergens.includes(allergen) && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
+                        </div>
+                        <span style={{ fontSize: 13 }}>{allergen}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "16px 0" }} />
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 20, lineHeight: 1.65 }}>
+                    By creating an account you agree to our Terms of Service and Privacy Policy. Your personal data is handled in compliance with <strong>PDPA (Singapore)</strong>.
+                  </div>
+                </>
+              )}
+              <button type="submit" className="form-btn" style={{ ...S.formBtn, width: "100%", padding: "13px 0", fontSize: 15 }}>
+                {isLogin ? "Sign in" : "Create account"}
+              </button>
+            </form>
+
+            <div style={{ marginTop: 20, textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>
+              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+              <span style={{ color: "var(--primary)", fontWeight: 600, cursor: "pointer" }} onClick={() => { setPage(isLogin ? "register" : "login"); setAuthError(""); }}>
+                {isLogin ? "Sign up" : "Sign in"} →
+              </span>
+            </div>
+            {isLogin && (
+              <div style={{ marginTop: 12, textAlign: "center", fontSize: 13, color: "var(--text-muted)", cursor: "pointer" }} onClick={() => setPage("chat")}>
+                Continue as Guest
+              </div>
+            )}
+          </div>
+        </div>
+
+        {showForgotPwd && (
+          <div style={S.modalOverlay} onClick={() => setShowForgotPwd(false)}>
+            <div style={{ ...S.modalCard, width: 370 }} className="modal-card" onClick={e => e.stopPropagation()}>
+              <div style={S.modalTitle}>Reset Password</div>
+              {forgotMsg ? (
+                <div style={{ background: "var(--green-light)", border: "1px solid var(--green-dim)", borderRadius: "var(--r-md)", padding: "10px 14px", fontSize: 13, color: "var(--green)", marginBottom: 16 }}>
+                  ✓ {forgotMsg}
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword}>
+                  <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>Enter your email and we'll send a reset link.</div>
+                  <div style={S.formGroup}>
+                    <label style={S.label}>Email</label>
+                    <input className="form-input" style={S.input} type="email" placeholder="you@email.com" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} />
+                  </div>
+                  <button type="submit" className="form-btn" style={S.formBtn}>Send Reset Link</button>
+                </form>
+              )}
+              <div style={{ ...S.formLink, color: "var(--text-muted)", marginTop: 12 }} onClick={() => setShowForgotPwd(false)}>← Back to login</div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1350,70 +1527,72 @@ export default function App() {
       {/* Topbar */}
       <div style={S.topbar}>
         <div style={S.logo} onClick={() => setPage("chat")} role="button" tabIndex={0}>
-          <div style={S.logoIcon}>FB</div>
+          <div style={S.logoIcon}>🍳</div>
           FoodBot
         </div>
         <div style={S.topRight}>
-          <button style={S.btn} title="Help / FAQ" aria-label="Help and FAQ" onClick={() => setHelpOpen(true)}>❓</button>
+          <button className="topbar-btn btn-outline" style={S.btn} title="Help / FAQ" aria-label="Help and FAQ" onClick={() => setHelpOpen(true)}>❓ Help</button>
           <button
-            style={{ ...S.btn, color: page === 'shopping-list' ? '#16a34a' : '#555' }}
+            className={`topbar-btn btn-outline${page === 'shopping-list' ? ' topbar-btn-active' : ''}`}
+            style={S.btn}
             title="Shopping List"
             aria-label="Shopping list"
             onClick={() => setPage('shopping-list')}
           >
-            🛒
+            🛒 List
           </button>
-          <button style={S.btn} title="Reset Chat" aria-label="Reset chat" onClick={resetChat}>↺</button>
+          <button className="topbar-btn btn-outline" style={S.btn} title="Reset Chat" aria-label="Reset chat" onClick={resetChat}>↺ Reset</button>
           {user ? (
             <>
-              {user.isAdmin && <button style={{ ...S.btn, color: page === "admin" ? "#16a34a" : "#555" }} onClick={() => setPage("admin")}>Admin</button>}
-              <button title="My Favourites" aria-label="My favourites" style={{ ...S.btn, color: page === "favourites" ? "#16a34a" : "#555" }} onClick={() => setPage("favourites")}>♡</button>
+              {user.isAdmin && <button className={`topbar-btn btn-outline${page === "admin" ? ' topbar-btn-active' : ''}`} style={S.btn} onClick={() => setPage("admin")}>⚙ Admin</button>}
+              <button title="My Favourites" aria-label="My favourites" className={`topbar-btn btn-outline${page === "favourites" ? ' topbar-btn-active' : ''}`} style={S.btn} onClick={() => setPage("favourites")}>♡ Saved</button>
               <button
                 title="Meal Plan"
                 aria-label="Meal plan"
-                style={{ ...S.btn, color: page === 'meal-plan' ? '#16a34a' : '#555' }}
+                className={`topbar-btn btn-outline${page === 'meal-plan' ? ' topbar-btn-active' : ''}`}
+                style={S.btn}
                 onClick={() => setPage('meal-plan')}
               >
-                📅
+                📅 Plan
               </button>
-              <button style={{ ...S.btn, color: page === "profile" ? "#16a34a" : "#555" }} title="👤 Profile" onClick={() => setPage("profile")}>👤 Profile</button>
-              <div style={{ ...S.avatar("#2563eb"), width: 30, height: 30, fontSize: 12, cursor: "pointer" }} onClick={() => setPage("profile")}>{user?.name?.[0]?.toUpperCase() || '?'}</div>
-              <button style={S.btn} onClick={handleLogout}>Sign out</button>
+              <button className={`topbar-btn btn-outline${page === "profile" ? ' topbar-btn-active' : ''}`} style={S.btn} title="Profile" onClick={() => setPage("profile")}>👤 Profile</button>
+              <div style={{ ...S.avatar("var(--blue)"), width: 30, height: 30, fontSize: 12, cursor: "pointer", boxShadow: "0 0 0 2px var(--primary)" }} onClick={() => setPage("profile")}>{user?.name?.[0]?.toUpperCase() || '?'}</div>
+              <button className="topbar-btn btn-outline" style={S.btn} onClick={handleLogout}>Sign out</button>
             </>
           ) : (
             <>
-              <button style={S.btn} onClick={() => { setPage("login"); setAuthError(""); }}>Sign in</button>
-              <button style={S.btnPrimary} onClick={() => { setPage("register"); setAuthError(""); }}>Sign Up</button>
+              <button className="topbar-btn btn-outline" style={S.btn} onClick={() => { setPage("login"); setAuthError(""); }}>Sign in</button>
+              <button className="btn-primary" style={S.btnPrimary} onClick={() => { setPage("register"); setAuthError(""); }}>Sign Up</button>
             </>
           )}
         </div>
       </div>
 
       {sessionExpired && (
-        <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: '#dc2626', color: '#fff', padding: '10px 20px', borderRadius: 8, zIndex: 200, fontSize: 13, fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-          ⏱ Session expired — starting a new conversation…
+        <div className="fade-in" style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: 'var(--text-primary)', color: '#fff', padding: '11px 22px', borderRadius: 'var(--r-xl)', zIndex: 200, fontSize: 13, fontWeight: 500, boxShadow: 'var(--shadow-lg)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ opacity: 0.7 }}>⏱</span> Session expired — starting a new conversation…
         </div>
       )}
 
       {showForgotPwd && (
         <div style={S.modalOverlay} onClick={() => setShowForgotPwd(false)}>
-          <div style={{ ...S.modalCard, width: 360 }} onClick={e => e.stopPropagation()}>
+          <div style={{ ...S.modalCard, width: 370 }} className="modal-card" onClick={e => e.stopPropagation()}>
             <div style={S.modalTitle}>Reset Password</div>
             {forgotMsg ? (
-              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#16a34a', marginBottom: 16 }}>
-                {forgotMsg}
+              <div style={{ background: 'var(--green-light)', border: '1px solid var(--green-dim)', borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: 13, color: 'var(--green)', marginBottom: 16 }}>
+                ✓ {forgotMsg}
               </div>
             ) : (
               <form onSubmit={handleForgotPassword}>
                 <div style={S.formGroup}>
                   <label style={S.label}>Email Address</label>
-                  <input style={S.input} type="email" placeholder="you@email.com"
+                  <input className="form-input" style={S.input} type="email" placeholder="you@email.com"
                     value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} />
                 </div>
-                <button type="submit" style={S.formBtn}>Send Reset Email</button>
+                <button type="submit" className="form-btn" style={S.formBtn}>Send Reset Email</button>
               </form>
             )}
-            <div style={{ ...S.formLink, color: '#888', marginTop: 12 }}
+            <div style={{ ...S.formLink, color: 'var(--text-muted)', marginTop: 12 }}
               onClick={() => setShowForgotPwd(false)}>
               ← Back to login
             </div>
@@ -1427,15 +1606,15 @@ export default function App() {
         {(page === "chat") && (
           <div style={S.sidebar}>
             <div style={S.sidebarTop}>
-              <button style={S.newChatBtn} onClick={newChat}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="#555" strokeWidth="1.5" strokeLinecap="round" /></svg>
+              <button style={S.newChatBtn} className="sidebar-item new-chat-btn" onClick={newChat}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="var(--sidebar-text)" strokeWidth="1.5" strokeLinecap="round" /></svg>
                 New chat
               </button>
             </div>
-            <div style={{ flex: 1, overflowY: "auto" }}>
+            <div style={{ flex: 1, overflowY: "auto" }} className="sidebar-scroll">
               <div style={S.sideSection}>Chats</div>
               {sessions.map(s => (
-                <div key={s.id} style={S.histItem(s.id === activeSession)} onClick={() => setActiveSession(s.id)}>{s.title}</div>
+                <div key={s.id} className="sidebar-item" style={S.histItem(s.id === activeSession)} onClick={() => setActiveSession(s.id)}>{s.title}</div>
               ))}
             </div>
             {user && (
@@ -1455,8 +1634,6 @@ export default function App() {
         {/* Main content */}
         <div id="main-content" style={S.main}>
           {page === "chat" && renderChat()}
-          {page === "login" && renderAuth(true)}
-          {page === "register" && renderAuth(false)}
           {page === "profile" && user && renderProfile()}
           {page === "favourites" && user && renderFavourites()}
           {page === "admin" && user?.isAdmin && (
@@ -1515,26 +1692,24 @@ export default function App() {
       {/* Help modal */}
       {helpOpen && (
         <div style={S.modalOverlay} onClick={() => setHelpOpen(false)}>
-          <div style={S.modalCard} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={S.modalTitle}>❓ Help / FAQ</div>
-              <button style={{ ...S.btn, padding: '4px 10px' }} onClick={() => setHelpOpen(false)}>✕</button>
+          <div style={{ ...S.modalCard, width: 480 }} className="modal-card" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={S.modalTitle}>How to use FoodBot</div>
+              <button className="btn-outline" style={{ ...S.btn, padding: '5px 11px' }} onClick={() => setHelpOpen(false)}>✕</button>
             </div>
-            <div style={{ fontSize: 13, lineHeight: 1.8, color: '#444' }}>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>How to use FoodBot</div>
-              <div style={{ marginBottom: 12 }}>
-                <strong>1. Enter your ingredients</strong> — Type what you have on hand (e.g. "I have chicken, garlic and tomatoes").
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <strong>2. Confirm the list</strong> — FoodBot extracts the ingredients and asks you to confirm or edit them.
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <strong>3. Get recipes</strong> — FoodBot scores all recipes and shows the top 5 matches with missing ingredients highlighted.
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <strong>4. View a recipe</strong> — Click "View instructions" to see full cooking steps, nutrition info, and a shopping list for missing items.
-              </div>
-              <div style={{ borderTop: '1px solid #e5e5e5', paddingTop: 12, fontSize: 12, color: '#666' }}>
+            <div style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--text-secondary)' }}>
+              {[
+                ["1. Enter your ingredients", "Type what you have on hand — e.g. \"I have chicken, garlic and tomatoes\"."],
+                ["2. Confirm the list", "FoodBot extracts the ingredients and asks you to confirm or edit them."],
+                ["3. Get recipes", "FoodBot scores all recipes and shows the top 5 matches with missing ingredients highlighted."],
+                ["4. View a recipe", "Click \"View instructions\" for full cooking steps, nutrition info, and a shopping list for missing items."],
+              ].map(([title, desc]) => (
+                <div key={title} style={{ marginBottom: 14, padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 'var(--r-md)', borderLeft: '3px solid var(--primary)' }}>
+                  <strong style={{ color: 'var(--text-primary)' }}>{title}</strong>
+                  <div style={{ marginTop: 3, color: 'var(--text-muted)', fontSize: 12 }}>{desc}</div>
+                </div>
+              ))}
+              <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 12, fontSize: 12, color: 'var(--text-muted)' }}>
                 Register a free account to save favourites, set dietary preferences, and manage allergen alerts.
               </div>
             </div>
