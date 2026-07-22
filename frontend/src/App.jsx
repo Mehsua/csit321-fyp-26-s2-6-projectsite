@@ -100,7 +100,7 @@ const S = {
 
   // Profile
   profilePage: { flex: 1, overflowY: "auto", padding: "28px 40px", background: "var(--bg)" },
-  profileCard: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)", padding: 24, maxWidth: 520, marginBottom: 18, boxShadow: "var(--shadow-xs)" },
+  profileCard: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)", padding: 24, marginBottom: 18, boxShadow: "var(--shadow-xs)" },
   sectionTitle: { fontSize: 15, fontWeight: 700, marginBottom: 16, color: "var(--text-primary)", fontFamily: "var(--font-display)", letterSpacing: "-0.01em" },
   checkRow: { display: "flex", alignItems: "center", gap: 11, marginBottom: 11 },
   checkBox: (checked) => ({ width: 20, height: 20, borderRadius: 5, border: `2px solid ${checked ? "var(--primary)" : "var(--border)"}`, background: checked ? "var(--primary)" : "var(--surface)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }),
@@ -1038,9 +1038,8 @@ export default function App() {
               <span style={{ fontSize: 14, cursor: "pointer" }}>{label}</span>
             </div>
           ))}
-        </div>
-        <div style={S.profileCard}>
-          <div style={S.sectionTitle}>Allergens</div>
+
+          <div style={{ ...S.sectionTitle, marginTop: 20 }}>Allergens</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {ALLERGEN_OPTIONS.map(a => {
               const on = prefs.allergens.includes(a);
@@ -1053,6 +1052,33 @@ export default function App() {
             })}
           </div>
           <div style={{ fontSize: 12, color: "#999", marginTop: 10 }}>Recipes containing these allergens will be filtered out.</div>
+
+          <button
+            style={{ ...S.formBtn, marginTop: 20, background: savePrefsStatus === 'saving' ? '#aaa' : '#16a34a' }}
+            disabled={savePrefsStatus === 'saving'}
+            onClick={async () => {
+              setSavePrefsStatus('saving');
+              try {
+                const dietaryTags = [
+                  prefs.halal && 'Halal',
+                  prefs.vegetarian && 'Vegetarian',
+                  prefs.vegan && 'Vegan',
+                  prefs.glutenFree && 'GlutenFree',
+                ].filter(Boolean);
+                await api.put('/api/users/me/preferences', {
+                  dietaryTags,
+                  allergenNames: prefs.allergens,
+                });
+                setSavePrefsStatus('saved');
+                setTimeout(() => setSavePrefsStatus(null), 2000);
+              } catch {
+                setSavePrefsStatus('error');
+                setTimeout(() => setSavePrefsStatus(null), 3000);
+              }
+            }}
+          >
+            {savePrefsStatus === 'saving' ? 'Saving…' : savePrefsStatus === 'saved' ? '✓ Saved!' : savePrefsStatus === 'error' ? 'Save failed — try again' : 'Save Preferences'}
+          </button>
         </div>
         <div style={S.profileCard}>
           <div style={S.sectionTitle}>Taste Profile</div>
@@ -1168,34 +1194,6 @@ export default function App() {
           </button>
         </div>
         <div style={S.profileCard}>
-          <button
-            style={{ ...S.formBtn, background: savePrefsStatus === 'saving' ? '#aaa' : '#16a34a' }}
-            disabled={savePrefsStatus === 'saving'}
-            onClick={async () => {
-              setSavePrefsStatus('saving');
-              try {
-                const dietaryTags = [
-                  prefs.halal && 'Halal',
-                  prefs.vegetarian && 'Vegetarian',
-                  prefs.vegan && 'Vegan',
-                  prefs.glutenFree && 'GlutenFree',
-                ].filter(Boolean);
-                await api.put('/api/users/me/preferences', {
-                  dietaryTags,
-                  allergenNames: prefs.allergens,
-                });
-                setSavePrefsStatus('saved');
-                setTimeout(() => setSavePrefsStatus(null), 2000);
-              } catch {
-                setSavePrefsStatus('error');
-                setTimeout(() => setSavePrefsStatus(null), 3000);
-              }
-            }}
-          >
-            {savePrefsStatus === 'saving' ? 'Saving…' : savePrefsStatus === 'saved' ? '✓ Saved!' : savePrefsStatus === 'error' ? 'Save failed — try again' : 'Save Preferences'}
-          </button>
-        </div>
-        <div style={S.profileCard}>
           <div style={S.sectionTitle}>Favourites</div>
           {favourites.length === 0
             ? <div style={{ fontSize: 13, color: "#999" }}>No saved recipes yet. Chat to find some!</div>
@@ -1234,7 +1232,7 @@ export default function App() {
           favourites.map(r => {
             const pct = Math.round((r.score ?? 0) * 100);
             return (
-              <div key={r.id || r.recipe_id} style={{ ...S.recipeCard, marginBottom: 10 }}>
+              <div key={r.id || r.recipe_id} style={{ ...S.recipeCard, maxWidth: "none", marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                   <div style={S.recipeTitle}>{r.name}</div>
                   {pct > 0 && <span style={S.badge(pct >= 70 ? 'match' : pct >= 40 ? 'warn' : 'red')}>{pct}%</span>}
