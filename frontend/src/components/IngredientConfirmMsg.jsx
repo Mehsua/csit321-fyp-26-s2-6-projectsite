@@ -1,55 +1,64 @@
 import { useState } from 'react';
 
 const S = {
-  tagFilled: {
+  bubble: {
+    maxWidth: '72%',
+    padding: '13px 16px',
+    borderRadius: '18px 18px 18px 4px',
+    fontSize: 14,
+    lineHeight: 1.65,
+    background: 'var(--surface)',
+    color: 'var(--text-primary)',
+    boxShadow: 'var(--shadow-sm)',
+    border: '1px solid var(--border-light)',
+  },
+  tag: {
     display: 'inline-block',
     padding: '3px 10px',
-    borderRadius: 12,
-    background: '#16a34a',
-    color: '#fff',
+    borderRadius: 'var(--r-full)',
+    background: 'var(--primary-light)',
+    color: 'var(--primary)',
     fontSize: 12,
-    fontWeight: 500,
-    marginRight: 4,
-    marginBottom: 4,
-  },
-  confirmBubble: {
-    maxWidth: '70%',
-    padding: '10px 14px',
-    borderRadius: 12,
-    fontSize: 14,
-    lineHeight: 1.6,
-    background: '#f4f4f4',
-    color: '#1a1a1a',
+    fontWeight: 600,
+    marginRight: 5,
+    marginBottom: 5,
+    border: '1px solid rgba(232,96,44,0.2)',
   },
   btnConfirm: {
-    padding: '6px 14px',
-    borderRadius: 6,
+    padding: '7px 16px',
+    borderRadius: 'var(--r-md)',
     border: 'none',
-    background: '#16a34a',
+    background: 'var(--primary)',
     color: '#fff',
     cursor: 'pointer',
-    fontSize: 12,
-    fontWeight: 500,
+    fontSize: 13,
+    fontWeight: 600,
+    fontFamily: 'var(--font-body)',
+    boxShadow: '0 2px 6px rgba(232,96,44,0.28)',
   },
   btnEdit: {
-    padding: '6px 14px',
-    borderRadius: 6,
-    border: '1px solid #e5e5e5',
-    background: '#fff',
+    padding: '7px 14px',
+    borderRadius: 'var(--r-md)',
+    border: '1px solid var(--border)',
+    background: 'var(--surface)',
     cursor: 'pointer',
-    fontSize: 12,
-    color: '#555',
+    fontSize: 13,
+    color: 'var(--text-secondary)',
+    fontFamily: 'var(--font-body)',
+    fontWeight: 500,
   },
   editInput: {
     width: '100%',
-    padding: '7px 10px',
-    borderRadius: 6,
-    border: '1px solid #d1d5db',
+    padding: '9px 12px',
+    borderRadius: 'var(--r-md)',
+    border: '1.5px solid var(--border)',
     fontSize: 13,
-    fontFamily: 'inherit',
+    fontFamily: 'var(--font-body)',
     outline: 'none',
     boxSizing: 'border-box',
-    marginBottom: 8,
+    marginBottom: 10,
+    background: 'var(--bg)',
+    color: 'var(--text-primary)',
   },
 };
 
@@ -60,12 +69,12 @@ export default function IngredientConfirmMsg({ ingredients, onConfirm, confirmed
 
   if (confirmed) {
     return (
-      <div style={S.confirmBubble}>
-        <div>Got it! I identified these ingredients:</div>
-        <div style={{ marginTop: 8 }}>
-          {ingredients.map(i => <span key={i} style={S.tagFilled}>{i}</span>)}
+      <div style={S.bubble}>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>Identified ingredients</div>
+        <div style={{ marginBottom: 8 }}>
+          {ingredients.map(i => <span key={i} style={S.tag}>{i}</span>)}
         </div>
-        <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>✓ Confirmed</div>
+        <div style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>✓ Confirmed — finding recipes…</div>
       </div>
     );
   }
@@ -76,9 +85,10 @@ export default function IngredientConfirmMsg({ ingredients, onConfirm, confirmed
       if (parsed.length > 0) { setSubmitting(true); onConfirm(parsed); }
     };
     return (
-      <div style={S.confirmBubble}>
-        <div style={{ marginBottom: 8 }}>Edit your ingredient list:</div>
+      <div style={S.bubble}>
+        <div style={{ fontSize: 13, marginBottom: 10, color: 'var(--text-secondary)' }}>Edit your ingredient list (comma-separated):</div>
         <input
+          className="form-input"
           style={S.editInput}
           value={editText}
           onChange={e => setEditText(e.target.value)}
@@ -90,9 +100,9 @@ export default function IngredientConfirmMsg({ ingredients, onConfirm, confirmed
             disabled={submitting}
             onClick={handleSubmit}
           >
-            Find recipes
+            {submitting ? 'Finding…' : '🔍 Find recipes'}
           </button>
-          <button style={S.btnEdit} onClick={() => setEditing(false)}>Cancel</button>
+          <button className="btn-outline" style={S.btnEdit} onClick={() => setEditing(false)}>Cancel</button>
         </div>
       </div>
     );
@@ -100,24 +110,23 @@ export default function IngredientConfirmMsg({ ingredients, onConfirm, confirmed
 
   return (
     <div>
-      <div style={S.confirmBubble}>
-        <div>Got it! I identified these ingredients:</div>
-        <div style={{ marginTop: 8 }}>
-          {ingredients.map(i => <span key={i} style={S.tagFilled}>{i}</span>)}
+      <div style={S.bubble}>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>I identified these ingredients — is this right?</div>
+        <div style={{ marginBottom: 12 }}>
+          {ingredients.map(i => <span key={i} style={S.tag}>{i}</span>)}
         </div>
-        <div style={{ marginTop: 8 }}>Is this correct?</div>
-      </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <button
-          style={{ ...S.btnConfirm, opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
-          disabled={submitting}
-          onClick={() => { setSubmitting(true); onConfirm(ingredients); }}
-        >
-          ✓ Yes, find recipes
-        </button>
-        <button style={S.btnEdit} onClick={() => setEditing(true)}>
-          ✏ Edit list
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            style={{ ...S.btnConfirm, opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+            disabled={submitting}
+            onClick={() => { setSubmitting(true); onConfirm(ingredients); }}
+          >
+            {submitting ? 'Finding…' : '✓ Yes, find recipes'}
+          </button>
+          <button className="btn-outline" style={S.btnEdit} onClick={() => setEditing(true)}>
+            ✏ Edit list
+          </button>
+        </div>
       </div>
     </div>
   );
