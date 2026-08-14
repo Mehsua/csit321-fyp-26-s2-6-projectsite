@@ -67,7 +67,7 @@ describe('Ingredient confirmation flow', () => {
     await user.type(textarea, 'I have chicken and garlic');
     await user.keyboard('{Enter}');
 
-    expect(await screen.findByText(/Got it! I identified/i)).toBeInTheDocument();
+    expect(await screen.findByText(/I identified these ingredients/i)).toBeInTheDocument();
     expect(screen.getByText('chicken')).toBeInTheDocument();
     expect(screen.getByText('garlic')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Yes, find recipes/i })).toBeInTheDocument();
@@ -322,7 +322,7 @@ describe('Profile page: Save Preferences button', () => {
     render(<App />);
 
     await waitFor(() => screen.queryByText(/Guest Mode/i) === null);
-    const profileBtn = await screen.findByTitle('👤 Profile');
+    const profileBtn = await screen.findByTitle('Profile');
     await user.click(profileBtn);
 
     expect(screen.getByRole('button', { name: /Save Preferences/i })).toBeInTheDocument();
@@ -348,7 +348,7 @@ describe('Profile page: Save Preferences button', () => {
     render(<App />);
 
     await waitFor(() => screen.queryByText(/Guest Mode/i) === null);
-    const profileBtn = await screen.findByTitle('👤 Profile');
+    const profileBtn = await screen.findByTitle('Profile');
     await user.click(profileBtn);
 
     await user.click(screen.getByRole('button', { name: /Save Preferences/i }));
@@ -442,7 +442,7 @@ describe('Shopping list navigation', () => {
     const cartBtn = await screen.findByTitle('Shopping List');
     await user.click(cartBtn);
     expect(await screen.findByText('Shopping List')).toBeInTheDocument();
-    expect(screen.getByText(/No items yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/Your list is empty/i)).toBeInTheDocument();
   });
 
   it('navigates back to chat when Back button is clicked on shopping list page', async () => {
@@ -450,7 +450,7 @@ describe('Shopping list navigation', () => {
     render(<App />);
     const cartBtn = await screen.findByTitle('Shopping List');
     await user.click(cartBtn);
-    await screen.findByText(/No items yet/i);
+    await screen.findByText(/Your list is empty/i);
     const backBtn = screen.getByText('← Back');
     await user.click(backBtn);
     expect(await screen.findByPlaceholderText(/Type ingredients or ask a question/i)).toBeInTheDocument();
@@ -617,9 +617,9 @@ describe('ShoppingListPage — extended', () => {
     const user = userEvent.setup();
     render(<ShoppingListPage onBack={() => {}} user={null} items={mockItems} onClear={() => {}} />);
 
-    expect(screen.getByText(/0 checked/i)).toBeInTheDocument();
+    expect(screen.getByText(/0 of 3 items checked/i)).toBeInTheDocument();
     await user.click(screen.getByText('chicken'));
-    expect(screen.getByText(/1 checked/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 of 3 items checked/i)).toBeInTheDocument();
   });
 
   it('calls onClear when Clear All is clicked', async () => {

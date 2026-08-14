@@ -6,7 +6,7 @@ const { supabaseAdmin } = require('../src/db/supabase');
 
 // Mock JWT authentication as a registered user
 jest.mock('../src/middleware/authenticate', () => (req, _res, next) => {
-  req.user = { id: 'user-uuid', role: 'registered' };
+  req.user = { user_id: 'user-uuid', role: 'registered' };
   next();
 });
 
