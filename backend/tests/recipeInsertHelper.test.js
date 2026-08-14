@@ -76,6 +76,40 @@ describe('insertRecipe', () => {
     expect(nutritionPayload).toEqual({ recipe_id: 'r-new', calories: 210, protein_g: 4, carbs_g: 32, fats_g: 8, fibre_g: 6 });
   });
 
+  test('deduplicates ingredients by case-insensitive name, keeping only one', async () => {
+    const insertedIngredients = [];
+    const linkedIngredientIds = [];
+    supabaseAdmin.from = jest.fn().mockImplementation((table) => {
+      if (table === 'recipes') return recipesChain({ recipe_id: 'r-new', name: 'Vinaigrette Chicken', source: 'ai' });
+      if (table === 'ingredients') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          in: jest.fn().mockResolvedValue({ data: [], error: null }),
+          insert: jest.fn((rows) => {
+            insertedIngredients.push(...rows);
+            return { select: jest.fn().mockResolvedValue({ data: rows.map((r, i) => ({ ingredient_id: `ing-${i}`, name: r.name })), error: null }) };
+          }),
+        };
+      }
+      if (table === 'recipe_ingredients') {
+        return { insert: jest.fn((rows) => { linkedIngredientIds.push(...rows.map(r => r.ingredient_id)); return Promise.resolve({ error: null }); }) };
+      }
+      return { select: jest.fn().mockReturnThis(), in: jest.fn().mockResolvedValue({ data: [], error: null }) };
+    });
+
+    await insertRecipe({
+      name: 'Vinaigrette Chicken',
+      source: 'ai',
+      ingredients: [
+        { name: 'olive oil', category: 'Pantry' },
+        { name: 'Olive Oil', category: 'Pantry' },
+      ],
+    });
+
+    expect(insertedIngredients).toEqual([{ name: 'olive oil', category: 'Pantry' }]);
+    expect(linkedIngredientIds).toEqual(['ing-0']);
+  });
+
   test('throws when the recipe insert itself fails', async () => {
     supabaseAdmin.from = jest.fn().mockReturnValue({
       insert: jest.fn().mockReturnThis(),

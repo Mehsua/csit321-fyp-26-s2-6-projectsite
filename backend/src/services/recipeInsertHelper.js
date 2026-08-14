@@ -14,10 +14,17 @@ async function insertRecipe({
   const recipeId = recipe.recipe_id;
 
   if (ingredients.length > 0) {
-    const ingredientNames = ingredients.map(i => i.name);
+    const dedupedMap = new Map();
+    ingredients.forEach(i => {
+      const key = String(i.name).toLowerCase();
+      if (!dedupedMap.has(key)) dedupedMap.set(key, i);
+    });
+    const dedupedIngredients = Array.from(dedupedMap.values());
+
+    const ingredientNames = dedupedIngredients.map(i => i.name);
     const { data: existing } = await supabaseAdmin.from('ingredients').select('ingredient_id, name').in('name', ingredientNames);
     const existingMap = new Map((existing ?? []).map(i => [i.name, i.ingredient_id]));
-    const newOnes = ingredients.filter(i => !existingMap.has(i.name));
+    const newOnes = dedupedIngredients.filter(i => !existingMap.has(i.name));
     if (newOnes.length > 0) {
       const { data: newIngs, error: ingError } = await supabaseAdmin
         .from('ingredients')

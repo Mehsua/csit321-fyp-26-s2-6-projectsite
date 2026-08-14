@@ -1,7 +1,11 @@
 jest.mock('../src/db/supabase');
+jest.mock('../src/services/OpenAIService');
+jest.mock('../src/services/recipeInsertHelper');
 
 const { supabaseAdmin } = require('../src/db/supabase');
 const RecipeService = require('../src/services/RecipeService');
+const OpenAIService = require('../src/services/OpenAIService');
+const { insertRecipe } = require('../src/services/recipeInsertHelper');
 
 // Two mock recipes used across all tests
 const MOCK_CHICKEN = {
@@ -177,6 +181,131 @@ describe('RecipeService.recommend', () => {
     const results = await svc.recommend({ ingredients: ['garlic'], dietaryTags: ['Halal', 'Vegan'] });
 
     expect(results).toEqual([]);
+  });
+});
+
+describe('RecipeService.recommend — zero-match AI generation', () => {
+  let svc;
+  beforeEach(() => { svc = new RecipeService(); });
+  afterEach(() => jest.clearAllMocks());
+
+  test('generates and returns an AI recipe when no DB recipes match', async () => {
+    const mockOpenAI = {
+      generateRecipe: jest.fn().mockResolvedValue({
+        name: 'Beetroot Bowl',
+        category: 'Salad',
+        cooking_time: 20,
+        servings: 2,
+        instructions: '1. Roast beetroot.\n2. Serve.',
+        ingredients: [{ name: 'beetroot', category: 'Produce' }],
+        dietary_tags: ['Vegan'],
+        allergens: [],
+        nutrition: { calories: 180, protein_g: 3, carbs_g: 20, fats_g: 6, fibre_g: 5 },
+      }),
+    };
+    OpenAIService.mockImplementation(() => mockOpenAI);
+    insertRecipe.mockResolvedValue({ recipe_id: 'r-ai-1' });
+
+    let recipesCallCount = 0;
+    supabaseAdmin.from = jest.fn().mockImplementation((table) => {
+      if (table === 'recipes') {
+        recipesCallCount++;
+        if (recipesCallCount === 1) {
+          return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockResolvedValue({ data: [], error: null }) };
+        }
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          single: jest.fn().mockResolvedValue({
+            data: {
+              recipe_id: 'r-ai-1', name: 'Beetroot Bowl', description: null,
+              instructions: '1. Roast beetroot.\n2. Serve.', cooking_time: 20, servings: 2,
+              category: 'Salad', source: 'ai',
+              recipe_ingredients: [{ is_optional: false, ingredients: { name: 'beetroot' } }],
+              recipe_dietary_tags: [{ dietary_tags: { name: 'Vegan' } }],
+              recipe_allergens: [],
+              nutrition_info: { calories: 180, protein_g: 3, carbs_g: 20, fats_g: 6, fibre_g: 5 },
+            },
+            error: null,
+          }),
+        };
+      }
+      return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockResolvedValue({ data: [], error: null }) };
+    });
+
+    const result = await svc.recommend({ ingredients: ['beetroot'] });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].source).toBe('ai');
+    expect(result[0].name).toBe('Beetroot Bowl');
+    expect(result[0].matching_ingredients).toEqual(['beetroot']);
+    expect(insertRecipe).toHaveBeenCalledWith(expect.objectContaining({ source: 'ai', name: 'Beetroot Bowl' }));
+  });
+
+  test('resolves to empty array when the generated recipe rescored at zero match', async () => {
+    const mockOpenAI = {
+      generateRecipe: jest.fn().mockResolvedValue({
+        name: 'Quinoa Salad',
+        category: 'Salad',
+        cooking_time: 15,
+        servings: 2,
+        instructions: '1. Cook quinoa.\n2. Serve.',
+        ingredients: [{ name: 'quinoa', category: 'Pantry' }],
+        dietary_tags: ['Vegan'],
+        allergens: [],
+        nutrition: { calories: 150, protein_g: 5, carbs_g: 25, fats_g: 2, fibre_g: 3 },
+      }),
+    };
+    OpenAIService.mockImplementation(() => mockOpenAI);
+    insertRecipe.mockResolvedValue({ recipe_id: 'r-ai-2' });
+
+    let recipesCallCount = 0;
+    supabaseAdmin.from = jest.fn().mockImplementation((table) => {
+      if (table === 'recipes') {
+        recipesCallCount++;
+        if (recipesCallCount === 1) {
+          return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockResolvedValue({ data: [], error: null }) };
+        }
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          single: jest.fn().mockResolvedValue({
+            data: {
+              recipe_id: 'r-ai-2', name: 'Quinoa Salad', description: null,
+              instructions: '1. Cook quinoa.\n2. Serve.', cooking_time: 15, servings: 2,
+              category: 'Salad', source: 'ai',
+              // Generated ingredient ('quinoa') does not match the user-supplied ingredient
+              // ('beetroot'), so _scoreRecipe computes a score of 0 for this recipe.
+              recipe_ingredients: [{ is_optional: false, ingredients: { name: 'quinoa' } }],
+              recipe_dietary_tags: [{ dietary_tags: { name: 'Vegan' } }],
+              recipe_allergens: [],
+              nutrition_info: { calories: 150, protein_g: 5, carbs_g: 25, fats_g: 2, fibre_g: 3 },
+            },
+            error: null,
+          }),
+        };
+      }
+      return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockResolvedValue({ data: [], error: null }) };
+    });
+
+    const result = await svc.recommend({ ingredients: ['beetroot'] });
+
+    expect(result).toEqual([]);
+  });
+
+  test('resolves to empty array when generation fails after zero DB matches', async () => {
+    const mockOpenAI = { generateRecipe: jest.fn().mockResolvedValue(null) };
+    OpenAIService.mockImplementation(() => mockOpenAI);
+
+    supabaseAdmin.from = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ data: [], error: null }),
+    });
+
+    const result = await svc.recommend({ ingredients: ['durian', 'unobtainium'] });
+
+    expect(result).toEqual([]);
+    expect(insertRecipe).not.toHaveBeenCalled();
   });
 });
 

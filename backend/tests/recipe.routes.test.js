@@ -101,4 +101,13 @@ describe('GET /api/recipes/:id/instructions', () => {
     expect(res.status).toBe(503);
     expect(res.body.error).toBe('Cooking instructions unavailable, please try again later');
   });
+
+  it('returns ai_generated: true for a stored-instructions recipe with source ai', async () => {
+    mockRecipeQuery({ name: 'AI Beetroot Bowl', instructions: '1. Roast beetroot.', source: 'ai' });
+
+    const res = await request(app).get(`/api/recipes/${RECIPE_ID}/instructions`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ steps: '1. Roast beetroot.', ai_generated: true });
+  });
 });

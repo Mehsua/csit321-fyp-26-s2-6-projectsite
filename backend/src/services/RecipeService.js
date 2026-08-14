@@ -1,4 +1,6 @@
 const { supabaseAdmin } = require('../db/supabase');
+const OpenAIService = require('./OpenAIService');
+const { insertRecipe } = require('./recipeInsertHelper');
 
 class RecipeService {
   async recommend({ ingredients = [], dietaryTags = [], allergenNames = [], tasteProfile = null, medicalConditions = [] }) {
@@ -17,11 +19,55 @@ class RecipeService {
 
     if (error) throw new Error(error.message || String(error));
 
-    return (recipes || [])
+    const scored = (recipes || [])
       .map(recipe => this._scoreRecipe(recipe, userIngredients, dietaryTags, allergenNames, tasteProfile, medicalConditions))
       .filter(r => r !== null && r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
+
+    if (scored.length > 0) return scored;
+
+    const generated = await this._generateAndInsertRecipe(userIngredients, dietaryTags, allergenNames, tasteProfile, medicalConditions);
+    return generated ? [generated] : [];
+  }
+
+  async _generateAndInsertRecipe(userIngredients, dietaryTags, allergenNames, tasteProfile, medicalConditions) {
+    try {
+      const openAI = new OpenAIService();
+      const draft = await openAI.generateRecipe({ ingredients: userIngredients, dietaryTags, allergenNames });
+      if (!draft) return null;
+
+      const inserted = await insertRecipe({
+        name: draft.name,
+        category: draft.category,
+        cookingTime: draft.cooking_time,
+        servings: draft.servings,
+        instructions: draft.instructions,
+        source: 'ai',
+        ingredients: draft.ingredients,
+        dietaryTagNames: draft.dietary_tags,
+        allergenNames: draft.allergens,
+        nutrition: draft.nutrition,
+      });
+
+      const { data: fresh, error } = await supabaseAdmin
+        .from('recipes')
+        .select(`
+          recipe_id, name, description, instructions, cooking_time, servings, category, source,
+          recipe_ingredients(is_optional, ingredients(name)),
+          recipe_dietary_tags(dietary_tags(name)),
+          recipe_allergens(allergens(name)),
+          nutrition_info(calories, protein_g, carbs_g, fats_g, fibre_g)
+        `)
+        .eq('recipe_id', inserted.recipe_id)
+        .single();
+      if (error || !fresh) return null;
+
+      const scored = this._scoreRecipe(fresh, userIngredients, dietaryTags, allergenNames, tasteProfile, medicalConditions);
+      return scored && scored.score > 0 ? scored : null;
+    } catch {
+      return null;
+    }
   }
 
   _scoreRecipe(recipe, userIngredients, dietaryTags, allergenNames, tasteProfile, medicalConditions) {
@@ -104,6 +150,7 @@ class RecipeService {
       cooking_time: recipe.cooking_time,
       servings: recipe.servings,
       category: recipe.category,
+      source: recipe.source,
       score,
       matching_ingredients: matching,
       missing_ingredients: recipeIngredients.filter(ri =>

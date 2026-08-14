@@ -153,6 +153,26 @@ describe('Ingredient confirmation flow', () => {
     expect(await screen.findByText('I can help with that!')).toBeInTheDocument();
     expect(screen.queryByText(/Got it! I identified/i)).not.toBeInTheDocument();
   });
+
+  it('attempts ingredient extraction for a bare single ingredient with no keyword or comma', async () => {
+    api.post.mockImplementation((url) => {
+      if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
+      if (url === '/api/chat/extract-ingredients') return Promise.resolve({ ingredients: ['beetroot'] });
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const textarea = await screen.findByPlaceholderText(/Type ingredients or ask a question/i);
+    await user.type(textarea, 'beetroot');
+    await user.keyboard('{Enter}');
+
+    expect(await screen.findByText(/I identified these ingredients/i)).toBeInTheDocument();
+    // Verify ingredient tag is rendered as a span with 'beetroot' text
+    expect(screen.getByText('beetroot', { selector: 'span' })).toBeInTheDocument();
+    expect(api.post).toHaveBeenCalledWith('/api/chat/extract-ingredients', { text: 'beetroot' });
+  });
 });
 
 describe('Guest mode banner', () => {
@@ -432,6 +452,50 @@ describe('RecipeModal Save Favourite button', () => {
 
     const saveBtns = await screen.findAllByRole('button', { name: /♡ Save|✓ Saved/i });
     expect(saveBtns.length).toBeGreaterThanOrEqual(2); // one in card, one in modal
+  });
+});
+
+describe('AI-created recipe badge', () => {
+  it('shows the AI-created badge when a recipe has source ai', async () => {
+    const aiRecipe = { ...mockRecipe, source: 'ai' };
+    api.post.mockImplementation((url) => {
+      if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
+      if (url === '/api/chat/extract-ingredients') return Promise.resolve({ ingredients: ['chicken', 'garlic'] });
+      if (url === '/api/recipes/recommend') return Promise.resolve({ recipes: [aiRecipe] });
+      if (url === '/api/chat') return Promise.resolve({ reply: 'Sure!' });
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const textarea = await screen.findByPlaceholderText(/Type ingredients or ask a question/i);
+    await user.type(textarea, 'I have chicken and garlic');
+    await user.keyboard('{Enter}');
+    await user.click(await screen.findByRole('button', { name: /Yes, find recipes/i }));
+
+    expect(await screen.findByText(/AI-created/i)).toBeInTheDocument();
+  });
+
+  it('does not show the AI-created badge for a normal DB recipe', async () => {
+    api.post.mockImplementation((url) => {
+      if (url === '/api/sessions') return Promise.resolve({ session_id: 'test-session' });
+      if (url === '/api/chat/extract-ingredients') return Promise.resolve({ ingredients: ['chicken', 'garlic'] });
+      if (url === '/api/recipes/recommend') return Promise.resolve({ recipes: [mockRecipe] });
+      if (url === '/api/chat') return Promise.resolve({ reply: 'Sure!' });
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const textarea = await screen.findByPlaceholderText(/Type ingredients or ask a question/i);
+    await user.type(textarea, 'I have chicken and garlic');
+    await user.keyboard('{Enter}');
+    await user.click(await screen.findByRole('button', { name: /Yes, find recipes/i }));
+    await screen.findByText('Chicken Tomato Pasta');
+
+    expect(screen.queryByText(/AI-created/i)).not.toBeInTheDocument();
   });
 });
 

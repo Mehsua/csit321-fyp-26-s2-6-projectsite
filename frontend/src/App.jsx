@@ -35,6 +35,7 @@ function adaptRecipe(r) {
     missing: r.missing_ingredients || [],
     allergen_warning: r.allergen_warning,
     medical_warnings: r.medical_warnings || [],
+    source: r.source,
   };
 }
 
@@ -150,6 +151,7 @@ function RecipeModal({ recipe, onClose, instructions, onFetchInstructions, onSav
 
         {/* Dietary tags */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+          {recipe.source === 'ai' && <span style={S.badge("warn")}>✨ AI-created recipe</span>}
           {recipe.dietary.map(d => <span key={d} style={S.badge("match")}>{d}</span>)}
           {recipe.allergen_warning && <span style={S.badge("red")}>⚠ Allergen warning</span>}
         </div>
@@ -280,6 +282,7 @@ function RecipeCardMsg({ recipe, onView, onSave, saved, onAddToList }) {
       </div>
       <div style={S.recipeMeta}>
         <span>{recipe.cookTime} mins</span>
+        {recipe.source === 'ai' && <span style={S.badge("warn")}>✨ AI-created</span>}
         {recipe.calories && <span style={{ fontWeight: 600, color: '#374151' }}>{recipe.calories} kcal</span>}
         {recipe.dietary.slice(0, 2).map(d => <span key={d} style={S.badge("match")}>{d}</span>)}
         {recipe.allergen_warning && <span style={S.badge("red")}>⚠ Allergen</span>}
@@ -491,28 +494,24 @@ export default function App() {
       }
     }
 
-    // Ingredient extraction + confirmation flow
-    const ingredientKeywords = ["have", "got", "using", "use", "with", "make", "cook", "ingredients", "fridge"];
-    const isIngredientQuery = ingredientKeywords.some(k => msg.toLowerCase().includes(k)) || msg.includes(",");
-
-    if (isIngredientQuery) {
-      try {
-        const { ingredients } = await api.post('/api/chat/extract-ingredients', { text: msg });
-        if (ingredients.length > 0) {
-          const confirmMsg = {
-            role: 'assistant',
-            type: 'ingredient_confirm',
-            id: Date.now(),
-            ingredients,
-            confirmed: false,
-          };
-          updateMessages([...newMsgs, confirmMsg]);
-          setLoading(false);
-          return;
-        }
-      } catch {
-        // Fall through to general chat on extraction error
+    // Ingredient extraction + confirmation flow (always attempted for non-support messages;
+    // falls through to general chat below if nothing is extracted)
+    try {
+      const { ingredients } = await api.post('/api/chat/extract-ingredients', { text: msg });
+      if (ingredients.length > 0) {
+        const confirmMsg = {
+          role: 'assistant',
+          type: 'ingredient_confirm',
+          id: Date.now(),
+          ingredients,
+          confirmed: false,
+        };
+        updateMessages([...newMsgs, confirmMsg]);
+        setLoading(false);
+        return;
       }
+    } catch {
+      // Fall through to general chat on extraction error
     }
 
     // General chat
